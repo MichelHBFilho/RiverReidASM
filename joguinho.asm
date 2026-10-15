@@ -22,8 +22,11 @@ posNaveY: var #1
 ; valor de 0 a 30
 ; 0 = gameover
 combustivelNave: var #1 
+contadorCombustivel: var #1
 
 combustivelTexto: string "FUEL:"
+
+gameOverTexto: string "GAMEOVER"
 
 main:
     loadn r0, #20 ; Nasce no centro da tela
@@ -36,12 +39,37 @@ main:
 	mainLoop:
 		call DesenharNave
 		call DesenhaCombustivel
+		call ConsomeCombustivel
 		call Delay
 		call ApagaNave
 		call MovimentaNave
 		jmp mainLoop
 
     halt
+
+GameOver:
+	push r0
+	push r1
+	push r2
+	push r3
+	push r4
+	push r5
+	push r6
+
+	loadn r0, #616
+	loadn r1, #gameOverTexto
+	loadn r2, #0
+	call ImprimeStr
+	halt
+
+	pop r6
+	pop r5
+	pop r4
+	pop r3
+	pop r2
+	pop r1
+	pop r0
+	rts
 
 DesenharNave:
     push r0
@@ -181,6 +209,44 @@ MovimentaNave:
 		pop r0
 		rts
 
+ConsomeCombustivel:
+	push r0
+	push r1
+	push r2
+	push r3
+	push r4
+	push r5
+	push r6
+
+	load r0, contadorCombustivel
+	inc r0
+	store contadorCombustivel, r0
+	
+	loadn r1, #100 ; A cada 100 frames, consome 1 barrinha
+	cmp r0, r1
+	jle ConsomeCombustivel_Fim
+
+	; zera contador
+	loadn r0, #0 
+	store contadorCombustivel, r0
+
+	; decrementa combustivel
+	load r0, combustivelNave
+	dec r0
+	store combustivelNave, r0
+
+	jz GameOver
+
+	ConsomeCombustivel_Fim:
+		pop r6	; Resgata os valores dos registradores utilizados na Subrotina da Pilha
+		pop r5
+		pop r4
+		pop r3
+		pop r2
+		pop r1
+		pop r0
+		rts
+
 DesenhaCombustivel:
 	push r0
 	push r1
@@ -198,6 +264,8 @@ DesenhaCombustivel:
 	loadn r0, #1166 ; Pos primeiro bloco de combustivel
 	load r1, combustivelNave
 	loadn r2, #125 ; bloco preenchido
+	loadn r3, #' '
+	loadn r4, #1200 ; limite tela
 
 	DesenhaCombustivel_Loop:
 		outchar r2, r0
@@ -205,6 +273,11 @@ DesenhaCombustivel:
 		dec r1
 		jnz DesenhaCombustivel_Loop
 	
+	DesenhaCombustivel_Loop2: ; apaga onde não tem mais combustivel
+		outchar r3, r0
+		inc r0
+		cmp r0, r4
+		jne DesenhaCombustivel_Loop2
 
 	pop r6	; Resgata os valores dos registradores utilizados na Subrotina da Pilha
 	pop r5
