@@ -19,18 +19,26 @@ CorpoNaveCaracteres: string "rtzmu"
 ; Posicao da cabeca!!!
 posNaveX: var #1
 posNaveY: var #1
+; valor de 0 a 30
+; 0 = gameover
+combustivelNave: var #1 
+
+combustivelTexto: string "FUEL:"
 
 main:
     loadn r0, #20 ; Nasce no centro da tela
     loadn r1, #25 ; Y sempre fica em 27
+	loadn r2, #30 ; comeca com o maximo de combustivel
     store posNaveX, r0
     store posNaveY, r1
+	store combustivelNave, r2
 
 	mainLoop:
 		call DesenharNave
+		call DesenhaCombustivel
 		call Delay
 		call ApagaNave
-		call Movimenta
+		call MovimentaNave
 		jmp mainLoop
 
     halt
@@ -125,7 +133,7 @@ ApagaNave:
 	pop r0
     rts
 
-Movimenta:
+MovimentaNave:
 	push r0
 	push r1
 	push r2
@@ -173,6 +181,39 @@ Movimenta:
 		pop r0
 		rts
 
+DesenhaCombustivel:
+	push r0
+	push r1
+	push r2
+	push r3
+	push r4
+	push r5
+	push r6
+
+	loadn r0, #1160 ; Pos primeiro caracter
+	loadn r1, #combustivelTexto
+	loadn r2, #0
+	call ImprimeStr
+
+	loadn r0, #1166 ; Pos primeiro bloco de combustivel
+	load r1, combustivelNave
+	loadn r2, #125 ; bloco preenchido
+
+	DesenhaCombustivel_Loop:
+		outchar r2, r0
+		inc r0
+		dec r1
+		jnz DesenhaCombustivel_Loop
+	
+
+	pop r6	; Resgata os valores dos registradores utilizados na Subrotina da Pilha
+	pop r5
+	pop r4
+	pop r3
+	pop r2
+	pop r1
+	pop r0
+	rts
 
 Delay:
     push r0
@@ -210,7 +251,7 @@ ImprimeTela: 	;  Rotina de Impresao de Cenario na Tela Inteira
 	loadn R6, #tela0Linha0	; Endereco onde comeca a primeira linha do cenario!!
 	
    ImprimeTela_Loop:
-		call ImprimeStr
+		call ImprimeTela_ImprimeStr
 		add r0, r0, r3  	; incrementaposicao para a segunda linha na tela -->  r0 = R0 + 40
 		add r1, r1, r4  	; incrementa o ponteiro para o comeco da proxima linha na memoria (40 + 1 porcausa do /0 !!) --> r1 = r1 + 41
 		add r6, r6, r4  	; incrementa o ponteiro para o comeco da proxima linha na memoria (40 + 1 porcausa do /0 !!) --> r1 = r1 + 41
@@ -226,7 +267,7 @@ ImprimeTela: 	;  Rotina de Impresao de Cenario na Tela Inteira
 	pop r0
 	rts
 
-ImprimeStr:	;  Rotina de Impresao de Mensagens:    r0 = Posicao da tela que o primeiro caractere da mensagem sera' impresso;  r1 = endereco onde comeca a mensagem; r2 = cor da mensagem.   Obs: a mensagem sera' impressa ate' encontrar "/0"
+ImprimeTela_ImprimeStr:	;  Rotina de Impresao de Mensagens:    r0 = Posicao da tela que o primeiro caractere da mensagem sera' impresso;  r1 = endereco onde comeca a mensagem; r2 = cor da mensagem.   Obs: a mensagem sera' impressa ate' encontrar "/0"
 	push r0	; protege o r0 na pilha para preservar seu valor
 	push r1	; protege o r1 na pilha para preservar seu valor
 	push r2	; protege o r1 na pilha para preservar seu valor
@@ -235,6 +276,47 @@ ImprimeStr:	;  Rotina de Impresao de Mensagens:    r0 = Posicao da tela que o pr
 	push r5	; protege o r5 na pilha para ser usado na subrotina
 	push r6	; protege o r6 na pilha para ser usado na subrotina
 	
+	loadn r3, #'\0'	; Criterio de parada
+	loadn r5, #' '	; Espaco em Branco
+
+   ImprimeTela_ImprimeStr_Loop:	
+		loadi r4, r1
+		cmp r4, r3		; If (Char == \0)  vai Embora
+		jeq ImprimeTela_ImprimeStr_Sai
+		cmp r4, r5		; If (Char == ' ')  vai Pula outchar do espaco para na apagar outros caracteres
+		jeq ImprimeTela_ImprimeStr_Skip
+		add r4, r2, r4	; Soma a Cor
+		outchar r4, r0	; Imprime o caractere na tela
+		storei r6, r4
+   ImprimeTela_ImprimeStr_Skip:
+		inc r0			; Incrementa a posicao na tela
+		inc r1			; Incrementa o ponteiro da String
+		inc r6			; Incrementa o ponteiro da String da Tela 0
+		jmp ImprimeTela_ImprimeStr_Loop
+	
+   ImprimeTela_ImprimeStr_Sai:	
+	pop r6	; Resgata os valores dos registadores utilizados na Subrotina da Pilha
+	pop r5
+	pop r4
+	pop r3
+	pop r2
+	pop r1
+	pop r0
+	rts
+
+; imprime string do primeiro caracter até o \0
+; r0 = posicao primeiro caracter
+; r1 = endereco que comeca a mensagem
+; r2 = cor da mensagem
+; não guarda na tela 0! Isso era um problema antes
+ImprimeStr:
+	push r0	; protege o r0 na pilha para preservar seu valor
+	push r1	; protege o r1 na pilha para preservar seu valor
+	push r2	; protege o r1 na pilha para preservar seu valor
+	push r3	; protege o r3 na pilha para ser usado na subrotina
+	push r4	; protege o r4 na pilha para ser usado na subrotina
+	push r5	; protege o r5 na pilha para ser usado na subrotina
+	push r6	; protege o r6 na pilha para ser usado na subrotina
 	
 	loadn r3, #'\0'	; Criterio de parada
 	loadn r5, #' '	; Espaco em Branco
@@ -247,11 +329,9 @@ ImprimeStr:	;  Rotina de Impresao de Mensagens:    r0 = Posicao da tela que o pr
 		jeq ImprimeStr_Skip
 		add r4, r2, r4	; Soma a Cor
 		outchar r4, r0	; Imprime o caractere na tela
-		storei r6, r4
    ImprimeStr_Skip:
 		inc r0			; Incrementa a posicao na tela
 		inc r1			; Incrementa o ponteiro da String
-		inc r6			; Incrementa o ponteiro da String da Tela 0
 		jmp ImprimeStr_Loop
 	
    ImprimeStr_Sai:	
