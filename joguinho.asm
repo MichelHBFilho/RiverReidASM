@@ -14,7 +14,7 @@ static CorpoNave + #2, #40
 static CorpoNave + #3, #41
 static CorpoNave + #4, #80
 
-CorpoNaveCaracteres: string "adhlz"
+CorpoNaveCaracteres: string "rtzmu"
 
 ; Posicao da cabeca!!!
 posNaveX: var #1
