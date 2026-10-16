@@ -1,34 +1,46 @@
 jmp main
 
-; Posicoes do corpo com relacao a cabeca da nave
-; Cabeca		[0] = 0
-; Asa esquerda	[1] = 39
-; Corpo			[2] = 40
-; Asa direita 	[3] = 41
-; Bunda 		[4] = 80
+; ======================
+;        Textos
+; ======================
+	combustivelTexto: string "FUEL:"
+	gameOverTexto: string "GAMEOVER"
+; ======================
+;     Variaveis Nave
+; ======================
+	; Posicoes do corpo com relacao a cabeca da nave
+	CorpoNave: var #5
+		static CorpoNave + #0, #0	; Cabeca		[0] = 0
+		static CorpoNave + #1, #39	; Asa esquerda	[1] = 39
+		static CorpoNave + #2, #40	; Corpo			[2] = 40
+		static CorpoNave + #3, #41	; Asa direita 	[3] = 41
+		static CorpoNave + #4, #80	; Bunda 		[4] = 80
+	CorpoNaveCaracteres: string "rtzmu"
 
-CorpoNave: var #5
-static CorpoNave + #0, #0
-static CorpoNave + #1, #39
-static CorpoNave + #2, #40
-static CorpoNave + #3, #41
-static CorpoNave + #4, #80
+	posNaveX: var #1
+	posNaveY: var #1
 
-CorpoNaveCaracteres: string "rtzmu"
+	combustivelNave: var #1 		; 0-30
+; ======================
+; Variaveis Helicopteros
+; ======================
+	; Posicoes do corpo com relacao ao parte superior esquerda do helicoptero
+	CorpoHelicotero: var #4
+		static CorpoHelicotero + #0, #0		; Sup Esquerda	[0] = 0
+		static CorpoHelicotero + #1, #1		; Sup Direita	[1] = 39
+		static CorpoHelicotero + #2, #41	; Inf Direita	[2] = 40
+		static CorpoHelicotero + #3, #40	; Inf Esquerda 	[3] = 41
+	CorpoHelicopteroCaracters: string "nold" 
+	
+	; Guarda a posição de  5 helicopteros
+	; 2000 -> Objeto Morto
+	posHelicopterosX: var #5 
+	posHelicopterosY: var #5
 
-; Posicao da cabeca!!!
-posNaveX: var #1
-posNaveY: var #1
-; valor de 0 a 30
-; 0 = gameover
-combustivelNave: var #1 
-contadorCombustivel: var #1
-
-combustivelTexto: string "FUEL:"
-
-gameOverTexto: string "GAMEOVER"
+contadorFrames: var #1						; Conta frames para operar
 
 main:
+	call ApagaTela
     loadn r0, #20 ; Nasce no centro da tela
     loadn r1, #25 ; Y sempre fica em 27
 	loadn r2, #30 ; comeca com o maximo de combustivel
@@ -36,41 +48,53 @@ main:
     store posNaveY, r1
 	store combustivelNave, r2
 
+	loadn r0, #20
+	loadn r1, #6
+	store posHelicopterosX, r0
+	store posHelicopterosY, r1
+
 	mainLoop:
+		call DesenhaTodosHelicopteros
 		call DesenharNave
 		call DesenhaCombustivel
 		call ConsomeCombustivel
 		call Delay
-		call ApagaNave
+		call ApagaTela
 		call MovimentaNave
+		call MovimentaTodosHelicopteros
+		call IncrementaContadorFrames
 		jmp mainLoop
 
     halt
 
-GameOver:
+IncrementaContadorFrames:
 	push r0
-	push r1
-	push r2
-	push r3
-	push r4
-	push r5
-	push r6
 
+	load r0, contadorFrames
+	inc r0
+	store contadorFrames, r0
+
+	pop r0
+    rts
+
+GameOver:
 	loadn r0, #616
 	loadn r1, #gameOverTexto
 	loadn r2, #0
 	call ImprimeStr
-	halt
+	
+	loadn r0, #'r'
+	GameOver_Loop:
+		inchar r1
+		cmp r0, r1
+		jeq main
+		jne GameOver_Loop
 
-	pop r6
-	pop r5
-	pop r4
-	pop r3
-	pop r2
-	pop r1
-	pop r0
 	rts
 
+; ======================
+; 	   Funções Nave
+; ======================
 DesenharNave:
     push r0
 	push r1
@@ -218,17 +242,11 @@ ConsomeCombustivel:
 	push r5
 	push r6
 
-	load r0, contadorCombustivel
-	inc r0
-	store contadorCombustivel, r0
-	
-	loadn r1, #100 ; A cada 100 frames, consome 1 barrinha
-	cmp r0, r1
-	jle ConsomeCombustivel_Fim
+	load r0, contadorFrames
+	loadn r1, #100
+	mod r0, r0, r1
 
-	; zera contador
-	loadn r0, #0 
-	store contadorCombustivel, r0
+	jnz ConsomeCombustivel_Fim
 
 	; decrementa combustivel
 	load r0, combustivelNave
@@ -288,6 +306,153 @@ DesenhaCombustivel:
 	pop r0
 	rts
 
+; ======================
+;  Funções Helicopteros
+; ======================
+
+DesenhaTodosHelicopteros:
+	push r0
+	push r1
+	push r2
+	push r3
+	push r4
+	push r5
+	push r6
+
+	loadn r1, #5
+	loadn r0, #0
+
+	DesenhaTodosHelicopteros_Loop:
+		call DesenhaHelicoptero
+		inc r0
+		dec r1
+		jnz DesenhaTodosHelicopteros_Loop
+
+	pop r6
+	pop r5
+	pop r4
+	pop r3
+	pop r2
+	pop r1
+	pop r0
+    rts
+
+; r0 = indice do helicoptero
+DesenhaHelicoptero:
+	push r0
+	push r1
+	push r2
+	push r3
+	push r4
+	push r5
+	push r6
+
+    loadn r1, #posHelicopterosX
+    loadn r2, #posHelicopterosY
+
+	; Aponta para o helicoptero certo
+	add r1, r0, r1
+	add r2, r0, r2
+
+	loadi r0, r1
+	loadi r1, r2
+
+    ; calcula posicao absoluta
+    loadn r6, #40
+    mul r1, r1, r6
+    add r0, r0, r1 ; r0 = posX + 40 * posY
+
+    ; carrega o vetor corpo nave
+    loadn r1, #CorpoHelicotero
+    loadn r2, #CorpoHelicopteroCaracters
+    
+    loadn r6, #4
+
+    ; print cabeca
+    DesenharHelicopteroLoop:
+        mov r3, r0 ; colocar posicao absoluta em r3
+        loadi r4, r1 ; r4 = corpohelicoptero[]-> diferenca relativa
+
+        add r3, r3, r4 ; r3 = posicao relativa + corpohelicoptero[] 
+        loadi r5, r2 ; r5 = caracter para imprimir
+        outchar r5, r3 ; imprime
+
+        inc r1
+        inc r2
+        
+        dec r6
+        jnz DesenharHelicopteroLoop
+
+    pop r6
+	pop r5
+	pop r4
+	pop r3
+	pop r2
+	pop r1
+	pop r0
+    rts
+
+MovimentaTodosHelicopteros:
+	push r0
+	push r1
+	push r2
+	push r3
+	push r4
+	push r5
+	push r6
+
+	loadn r1, #5
+	loadn r0, #0
+
+	MovimentaTodosHelicopteros_Loop:
+		call MovimentaHelicoptero
+		inc r0
+		dec r1
+		jnz MovimentaTodosHelicopteros_Loop
+
+	pop r6
+	pop r5
+	pop r4
+	pop r3
+	pop r2
+	pop r1
+	pop r0
+    rts
+
+; r0 = indice do helicoptero
+MovimentaHelicoptero:
+	push r0
+	push r1
+	push r2
+	push r3
+	push r4
+	push r5
+	push r6
+
+	loadn r1, #posHelicopterosY
+	add r1, r0, r1
+	
+	loadi r0, r1
+
+	load r2, contadorFrames
+	loadn r3, #100
+	mod r2, r2, r3
+
+	jnz MovimentaHelicoptero_Fim
+
+	inc r0
+	storei r1, r0
+
+	MovimentaHelicoptero_Fim:
+		pop r6
+		pop r5
+		pop r4
+		pop r3
+		pop r2
+		pop r1
+		pop r0
+		rts
+
 Delay:
     push r0
     push r1
@@ -305,91 +470,19 @@ Delay_Loop2:
     pop r0
     rts
 
-ImprimeTela: 	;  Rotina de Impresao de Cenario na Tela Inteira
-		;  r1 = endereco onde comeca a primeira linha do Cenario
-		;  r2 = cor do Cenario para ser impresso
-
-	push r0
-	push r1
-	push r2
-	push r3
-	push r4
-	push r5
-	push r6
-
-	loadn R0, #0  	; posicao inicial tem que ser o comeco da tela!
-	loadn R3, #40  	; Incremento da posicao da tela!
-	loadn R4, #41  	; incremento do ponteiro das linhas da tela
-	loadn R5, #1200 ; Limite da tela!
-	loadn R6, #tela0Linha0	; Endereco onde comeca a primeira linha do cenario!!
-	
-   ImprimeTela_Loop:
-		call ImprimeTela_ImprimeStr
-		add r0, r0, r3  	; incrementaposicao para a segunda linha na tela -->  r0 = R0 + 40
-		add r1, r1, r4  	; incrementa o ponteiro para o comeco da proxima linha na memoria (40 + 1 porcausa do /0 !!) --> r1 = r1 + 41
-		add r6, r6, r4  	; incrementa o ponteiro para o comeco da proxima linha na memoria (40 + 1 porcausa do /0 !!) --> r1 = r1 + 41
-		cmp r0, r5			; Compara r0 com 1200
-		jne ImprimeTela_Loop	; Enquanto r0 < 1200
-
-	pop r6	; Resgata os valores dos registradores utilizados na Subrotina da Pilha
-	pop r5
-	pop r4
-	pop r3
-	pop r2
-	pop r1
-	pop r0
-	rts
-
-ImprimeTela_ImprimeStr:	;  Rotina de Impresao de Mensagens:    r0 = Posicao da tela que o primeiro caractere da mensagem sera' impresso;  r1 = endereco onde comeca a mensagem; r2 = cor da mensagem.   Obs: a mensagem sera' impressa ate' encontrar "/0"
-	push r0	; protege o r0 na pilha para preservar seu valor
-	push r1	; protege o r1 na pilha para preservar seu valor
-	push r2	; protege o r1 na pilha para preservar seu valor
-	push r3	; protege o r3 na pilha para ser usado na subrotina
-	push r4	; protege o r4 na pilha para ser usado na subrotina
-	push r5	; protege o r5 na pilha para ser usado na subrotina
-	push r6	; protege o r6 na pilha para ser usado na subrotina
-	
-	loadn r3, #'\0'	; Criterio de parada
-	loadn r5, #' '	; Espaco em Branco
-
-   ImprimeTela_ImprimeStr_Loop:	
-		loadi r4, r1
-		cmp r4, r3		; If (Char == \0)  vai Embora
-		jeq ImprimeTela_ImprimeStr_Sai
-		cmp r4, r5		; If (Char == ' ')  vai Pula outchar do espaco para na apagar outros caracteres
-		jeq ImprimeTela_ImprimeStr_Skip
-		add r4, r2, r4	; Soma a Cor
-		outchar r4, r0	; Imprime o caractere na tela
-		storei r6, r4
-   ImprimeTela_ImprimeStr_Skip:
-		inc r0			; Incrementa a posicao na tela
-		inc r1			; Incrementa o ponteiro da String
-		inc r6			; Incrementa o ponteiro da String da Tela 0
-		jmp ImprimeTela_ImprimeStr_Loop
-	
-   ImprimeTela_ImprimeStr_Sai:	
-	pop r6	; Resgata os valores dos registadores utilizados na Subrotina da Pilha
-	pop r5
-	pop r4
-	pop r3
-	pop r2
-	pop r1
-	pop r0
-	rts
-
 ; imprime string do primeiro caracter até o \0
 ; r0 = posicao primeiro caracter
 ; r1 = endereco que comeca a mensagem
 ; r2 = cor da mensagem
 ; não guarda na tela 0! Isso era um problema antes
 ImprimeStr:
-	push r0	; protege o r0 na pilha para preservar seu valor
-	push r1	; protege o r1 na pilha para preservar seu valor
-	push r2	; protege o r1 na pilha para preservar seu valor
-	push r3	; protege o r3 na pilha para ser usado na subrotina
-	push r4	; protege o r4 na pilha para ser usado na subrotina
-	push r5	; protege o r5 na pilha para ser usado na subrotina
-	push r6	; protege o r6 na pilha para ser usado na subrotina
+	push r0	
+	push r1
+	push r2
+	push r3
+	push r4
+	push r5
+	push r6
 	
 	loadn r3, #'\0'	; Criterio de parada
 	loadn r5, #' '	; Espaco em Branco
@@ -432,35 +525,3 @@ ApagaTela:
 	pop r1
 	pop r0
 	rts	
-
-; Declara e preenche tela linha por linha (40 caracteres):
-tela0Linha0  :  string "                                        "
-tela0Linha1  :  string "                                        "
-tela0Linha2  :  string "                                        "
-tela0Linha3  :  string "                                        "
-tela0Linha4  :  string "                                        "
-tela0Linha5  :  string "                                        "
-tela0Linha6  :  string "                                        "
-tela0Linha7  :  string "                                        "
-tela0Linha8  :  string "                                        "
-tela0Linha9  :  string "                                        "
-tela0Linha10  : string "                                        "
-tela0Linha11  : string "                                        "
-tela0Linha12  : string "                                        "
-tela0Linha13  : string "                                        "
-tela0Linha14  : string "                                        "
-tela0Linha15  : string "                                        "
-tela0Linha16  : string "                                        "
-tela0Linha17  : string "                                        "
-tela0Linha18  : string "                                        "
-tela0Linha19  : string "                                        "
-tela0Linha20  : string "                                        "
-tela0Linha21  : string "                                        "
-tela0Linha22  : string "                                        "
-tela0Linha23  : string "                                        "
-tela0Linha24  : string "                                        "
-tela0Linha25  : string "                    A                   "
-tela0Linha26  : string "                   dHl                  "
-tela0Linha27  : string "                    v                   "
-tela0Linha28  : string "                                        "
-tela0Linha29  : string "                                        "
