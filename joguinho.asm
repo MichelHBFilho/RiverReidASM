@@ -54,12 +54,10 @@ main:
 	store posHelicopterosY, r1
 
 	mainLoop:
-		call DesenhaTodosHelicopteros
-		call DesenharNave
-		call DesenhaCombustivel
+		call Desenha
 		call ConsomeCombustivel
 		call Delay
-		call ApagaTela
+		call Apaga
 		call MovimentaNave
 		call MovimentaTodosHelicopteros
 		call IncrementaContadorFrames
@@ -91,6 +89,49 @@ GameOver:
 		jne GameOver_Loop
 
 	rts
+
+Desenha:
+	push r0
+	push r1
+	push r2
+	push r3
+	push r4
+	push r5
+	push r6
+
+	call DesenharNave
+	call DesenhaTodosHelicopteros
+
+	pop r6
+	pop r5
+	pop r4
+	pop r3
+	pop r2
+	pop r1
+	pop r0
+	rts
+
+Apaga:
+	push r0
+	push r1
+	push r2
+	push r3
+	push r4
+	push r5
+	push r6
+
+	call ApagaNave
+	call ApagaTodosHelicopteros
+
+	pop r6
+	pop r5
+	pop r4
+	pop r3
+	pop r2
+	pop r1
+	pop r0
+	rts
+
 
 ; ======================
 ; 	   Funções Nave
@@ -161,16 +202,16 @@ ApagaNave:
 
     ; carrega o vetor corpo nave
     loadn r1, #CorpoNave
-    loadn r5, #' '        ; <<< carrega o espaco ANTES do loop
+    loadn r5, #' '
 
     loadn r6, #5
 
     ApagaNaveLoop:
         mov r3, r0 ; posicao absoluta em r3
         loadi r4, r1 ; r4 = offset relativo
-        add r3, r3, r4 ; <<< faltava somar o offset
+        add r3, r3, r4
 
-        outchar r5, r3 ; <<< registrador, nao literal
+        outchar r5, r3
 
         inc r1
         dec r6
@@ -254,6 +295,7 @@ ConsomeCombustivel:
 	store combustivelNave, r0
 
 	jz GameOver
+	call DesenhaCombustivel ; So desenha o combustivel quando muda!
 
 	ConsomeCombustivel_Fim:
 		pop r6	; Resgata os valores dos registradores utilizados na Subrotina da Pilha
@@ -432,18 +474,212 @@ MovimentaHelicoptero:
 	loadn r1, #posHelicopterosY
 	add r1, r0, r1
 	
-	loadi r0, r1
+	loadi r2, r1
 
-	load r2, contadorFrames
-	loadn r3, #100
-	mod r2, r2, r3
+	load r3, contadorFrames
+	loadn r4, #100
+	mod r3, r3, r4
 
 	jnz MovimentaHelicoptero_Fim
 
-	inc r0
-	storei r1, r0
+	inc r2
+	storei r1, r2
+
+	loadn r4, #1
+	call ChecaColisaoHelicoptero
+	cmp r7, r4
+	jeq GameOver
 
 	MovimentaHelicoptero_Fim:
+		pop r6
+		pop r5
+		pop r4
+		pop r3
+		pop r2
+		pop r1
+		pop r0
+		rts
+
+; r0 = indice do helicoptero
+; r7 = retorno
+ChecaColisaoHelicoptero:
+	push r0
+	push r1
+	push r2
+	push r3
+	push r4
+	push r5
+	push r6
+
+	; Y do helicoptero
+	loadn r1, #posHelicopterosY
+	add r1, r1, r0
+	loadi r2, r1
+	loadn r3, #2000
+	cmp r2, r3
+	jeq ChecaColisaoHelicoptero_Morto
+
+	; X do helicoptero
+	loadn r1, #posHelicopterosX
+	add r1, r1, r0
+	loadi r1, r1
+
+	; r5 = pos abs helicoptero
+	loadn r3, #40
+	mul r2, r2, r3
+	add r5, r1, r2
+
+	; r2 = pos abs nave
+	load r2, posNaveX
+	load r3, posNaveY
+	loadn r4, #40
+	mul r3, r3, r4
+	add r2, r2, r3
+
+	loadn r0, #CorpoNave
+	loadn r1, #5
+	loadn r3, #CorpoHelicotero
+	loadn r4, #4
+	call ChecaColisao
+	jmp ChecaColisaoHelicoptero_Fim
+
+	ChecaColisaoHelicoptero_Morto:
+		loadn r7, #0
+
+	ChecaColisaoHelicoptero_Fim:
+		pop r6
+		pop r5
+		pop r4
+		pop r3
+		pop r2
+		pop r1
+		pop r0
+		rts
+
+ApagaTodosHelicopteros:
+	push r0
+	push r1
+	push r2
+	push r3
+	push r4
+	push r5
+	push r6
+
+	loadn r1, #5
+	loadn r0, #0
+
+	ApagaTodosHelicopteros_Loop:
+		call ApagaHelicoptero
+		inc r0
+		dec r1
+		jnz ApagaTodosHelicopteros_Loop
+
+	pop r6
+	pop r5
+	pop r4
+	pop r3
+	pop r2
+	pop r1
+	pop r0
+    rts
+
+ApagaHelicoptero:
+	push r0
+	push r1
+	push r2
+	push r3
+	push r4
+	push r5
+	push r6
+
+    loadn r1, #posHelicopterosX
+    loadn r2, #posHelicopterosY
+
+	add r1, r1, r0
+	add r2, r2, r0
+
+	loadi r0, r1
+	loadi r1, r2
+
+    ; calcula posicao absoluta
+    loadn r6, #40
+    mul r1, r1, r6
+    add r0, r0, r1 ; r0 = posX + 40 * posY
+
+    ; carrega o vetor corpo nave
+    loadn r1, #CorpoHelicotero
+    loadn r5, #' '
+
+    loadn r6, #4
+
+    ApagaHelicopteroLoop:
+        mov r3, r0 ; posicao absoluta em r3
+        loadi r4, r1 ; r4 = offset relativo
+        add r3, r3, r4
+
+        outchar r5, r3
+
+        inc r1
+        dec r6
+        jnz ApagaHelicopteroLoop
+
+    pop r6
+	pop r5
+	pop r4
+	pop r3
+	pop r2
+	pop r1
+	pop r0
+    rts
+
+; r0: endereco corpo 1
+; r1: tamanho corpo 1
+; r2: pos absoluta corpo 1
+; r3: endereco corpo 2
+; r4: tamanho corpo 2
+; r5: pos absoluta corpo 2
+; r7: retorno
+ChecaColisao:
+	push r0
+	push r1
+	push r2
+	push r3
+	push r4
+	push r5
+	push r6
+
+	ChecaColisao_Loop1:
+		loadi r6, r0
+		add r6, r6, r2
+
+		push r3
+		push r4
+
+		ChecaColisao_Loop2:
+			loadi r7, r3
+			add r7, r7, r5
+			cmp r6, r7
+			jeq ChecaColisao_Colidiu
+			inc r3
+			dec r4
+			jnz ChecaColisao_Loop2
+
+		pop r4
+		pop r3
+
+		inc r0
+		dec r1
+		jnz ChecaColisao_Loop1
+
+	loadn r7, #0				; terminou os dois loops sem bater
+	jmp ChecaColisao_Fim
+
+	ChecaColisao_Colidiu:
+		pop r4					; desempilha o que o Loop1 deixou
+		pop r3
+		loadn r7, #1
+
+	ChecaColisao_Fim:
 		pop r6
 		pop r5
 		pop r4
