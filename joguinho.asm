@@ -111,6 +111,7 @@ Desenha:
 	push r6
 
 	call DesenharNave
+	call DesenhaTodosHelicopteros
 
 	pop r6
 	pop r5
@@ -131,6 +132,7 @@ Apaga:
 	push r6
 
 	call ApagaNave
+	call ApagaTodosHelicopteros
 
 	pop r6
 	pop r5
