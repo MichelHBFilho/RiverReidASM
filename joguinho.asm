@@ -41,12 +41,12 @@ contadorFrames: var #1						; Conta frames para operar
 
 main:
 	call ApagaTela
-    loadn r0, #20 ; Nasce no centro da tela
-    loadn r1, #25 ; Y sempre fica em 27
-	loadn r2, #30 ; comeca com o maximo de combustivel
+    loadn r0, #20 				; Nasce no centro da tela
+    loadn r1, #25 				; Y sempre fica em 27
+	loadn r2, #30 				; comeca com o maximo de combustivel
     store posNaveX, r0
     store posNaveY, r1
-	store combustivelNave, r2
+	store combustivelNave, r2	
 
 	loadn r0, #20
 	loadn r1, #6
@@ -76,19 +76,30 @@ IncrementaContadorFrames:
     rts
 
 GameOver:
+
+	; RESETA o Stack Pointer
+	; A função que chamou o GameOver não fez pop dos registradores
+	; Invés de fazer pop de cada registrador, prefiro resetar
+	; Uma vez que os valores ali não me interessam mais!
+	; Portanto, note que se der um rts aqui vai dar pau!
+	; Mas não pretendemos retornar, pretendemos dar um jmp main
+
+	loadn r0, #32767 			; Nao da para fazer loadn sp, #32767
+	mov sp, r0					; Pois não tem caminho
+
 	loadn r0, #616
 	loadn r1, #gameOverTexto
 	loadn r2, #0
 	call ImprimeStr
 	
 	loadn r0, #'r'
-	GameOver_Loop:
+	GameOver_Loop: 				; while(inchar != 'r')
 		inchar r1
 		cmp r0, r1
 		jeq main
 		jne GameOver_Loop
 
-	rts
+	; Não passa por aqui!
 
 Desenha:
 	push r0
@@ -100,7 +111,6 @@ Desenha:
 	push r6
 
 	call DesenharNave
-	call DesenhaTodosHelicopteros
 
 	pop r6
 	pop r5
@@ -121,7 +131,6 @@ Apaga:
 	push r6
 
 	call ApagaNave
-	call ApagaTodosHelicopteros
 
 	pop r6
 	pop r5
@@ -159,14 +168,13 @@ DesenharNave:
     
     loadn r6, #5
 
-    ; print cabeca
-    DesenharNaveLoop:
-        mov r3, r0 ; colocar posicao absoluta em r3
-        loadi r4, r1 ; r4 = corponave[]-> diferenca relativa
+    DesenharNaveLoop:		; for(int i = 0; i < 5; i++)
+        mov r3, r0 			; colocar posicao absoluta em r3
+        loadi r4, r1 		; r4 = corponave[]-> diferenca relativa
 
-        add r3, r3, r4 ; r3 = posicao relativa + corponave[] 
-        loadi r5, r2 ; r5 = caracter para imprimir
-        outchar r5, r3 ; imprime
+        add r3, r3, r4 		; r3 = posicao relativa + corponave[] 
+        loadi r5, r2 		; r5 = caracter para imprimir
+        outchar r5, r3 		; imprime
 
         inc r1
         inc r2
@@ -202,13 +210,15 @@ ApagaNave:
 
     ; carrega o vetor corpo nave
     loadn r1, #CorpoNave
-    loadn r5, #' '
+	
+	; TODO - preencher com o fundo 
+    loadn r5, #' '			; Preenche com espaço branco!
 
     loadn r6, #5
 
     ApagaNaveLoop:
-        mov r3, r0 ; posicao absoluta em r3
-        loadi r4, r1 ; r4 = offset relativo
+        mov r3, r0 			; posicao absoluta em r3
+        loadi r4, r1 		; r4 = offset relativo
         add r3, r3, r4
 
         outchar r5, r3
@@ -235,7 +245,7 @@ MovimentaNave:
 	push r5
 	push r6
 
-	inchar r0 ; if(r0 == 'a') esquerda() else if(r0 == 'd') direita()
+	inchar r0 				; if(r0 == 'a') esquerda() else if(r0 == 'd') direita()
 	loadn r1, #'a'
 	cmp r0, r1
 	jeq MovimentaEsquerda
@@ -246,26 +256,26 @@ MovimentaNave:
 
 	MovimentaEsquerda:
 		load r0, posNaveX
-		loadn r1, #1; Limite a esquerda
+		loadn r1, #1		; Limite a esquerda
 
-		dec r0 ; Movimenta para esquerda
-		cmp r0, r1 ; if(posX < 1) return
+		dec r0 				; Movimenta para esquerda
+		cmp r0, r1 			; if(posX < 1) return
 		jle MovimentaFim
 		store posNaveX, r0
 		jmp MovimentaFim
 
 	MovimentaDireita:
 		load r0, posNaveX
-		loadn r1, #38; Limite a direita
+		loadn r1, #38		; Limite a direita
 
-		inc r0 ; Movimenta para direita
-		cmp r0, r1 ; if(posX > 39) return
+		inc r0 				; Movimenta para direita
+		cmp r0, r1 			; if(posX > 39) return
 		jgr MovimentaFim
 		store posNaveX, r0
 		jmp MovimentaFim
 
 	MovimentaFim:
-		pop r6	; Resgata os valores dos registradores utilizados na Subrotina da Pilha
+		pop r6
 		pop r5
 		pop r4
 		pop r3
@@ -298,7 +308,7 @@ ConsomeCombustivel:
 	call DesenhaCombustivel ; So desenha o combustivel quando muda!
 
 	ConsomeCombustivel_Fim:
-		pop r6	; Resgata os valores dos registradores utilizados na Subrotina da Pilha
+		pop r6
 		pop r5
 		pop r4
 		pop r3
@@ -316,30 +326,32 @@ DesenhaCombustivel:
 	push r5
 	push r6
 
-	loadn r0, #1160 ; Pos primeiro caracter
+	loadn r0, #1160 			; Pos primeiro caracter
 	loadn r1, #combustivelTexto
 	loadn r2, #0
 	call ImprimeStr
 
-	loadn r0, #1166 ; Pos primeiro bloco de combustivel
+	loadn r0, #1166 			; Pos primeiro bloco de combustivel
 	load r1, combustivelNave
-	loadn r2, #125 ; bloco preenchido
+	loadn r2, #125 			; bloco preenchido
 	loadn r3, #' '
-	loadn r4, #1200 ; limite tela
+	loadn r4, #1200 			; limite tela
 
 	DesenhaCombustivel_Loop:
-		outchar r2, r0
+		outchar r2, r0			; imprime bloco preenchido onde tem combustivel
 		inc r0
-		dec r1
+		dec r1					; if(r1 != 0) goto Loop
 		jnz DesenhaCombustivel_Loop
 	
-	DesenhaCombustivel_Loop2: ; apaga onde não tem mais combustivel
-		outchar r3, r0
+	; depois do LOOP1 o r0 aponta para a primeira posicao que não tem combustivel
+
+	DesenhaCombustivel_Loop2: 	; apaga onde não tem mais combustivel
+		outchar r3, r0			; imprime espaco em r0
 		inc r0
-		cmp r0, r4
+		cmp r0, r4				; if(r0 != limitetela) goto loop
 		jne DesenhaCombustivel_Loop2
 
-	pop r6	; Resgata os valores dos registradores utilizados na Subrotina da Pilha
+	pop r6
 	pop r5
 	pop r4
 	pop r3
@@ -364,11 +376,11 @@ DesenhaTodosHelicopteros:
 	loadn r1, #5
 	loadn r0, #0
 
-	DesenhaTodosHelicopteros_Loop:
+	DesenhaTodosHelicopteros_Loop:			; for(int i = 0; i < 5; i++)
 		call DesenhaHelicoptero
-		inc r0
-		dec r1
-		jnz DesenhaTodosHelicopteros_Loop
+		inc r0								; r0 é o argumento da função indica o indice do Helicoptero
+		dec r1								; inves de comparar eu vou decrementando o r1
+		jnz DesenhaTodosHelicopteros_Loop	; quando zerar r1 acabou
 
 	pop r6
 	pop r5
@@ -408,19 +420,19 @@ DesenhaHelicoptero:
     loadn r1, #CorpoHelicotero
     loadn r2, #CorpoHelicopteroCaracters
     
+	; eu nao gosto de guardar tao hardocodado o tamanho dos vetores
     loadn r6, #4
 
-    ; print cabeca
-    DesenharHelicopteroLoop:
-        mov r3, r0 ; colocar posicao absoluta em r3
-        loadi r4, r1 ; r4 = corpohelicoptero[]-> diferenca relativa
+    DesenharHelicopteroLoop:; for(int i = 0; i < 4; i++)
+        mov r3, r0 			; colocar posicao absoluta em r3
+        loadi r4, r1 		; r4 = corpohelicoptero[]-> diferenca relativa
 
-        add r3, r3, r4 ; r3 = posicao relativa + corpohelicoptero[] 
-        loadi r5, r2 ; r5 = caracter para imprimir
-        outchar r5, r3 ; imprime
+        add r3, r3, r4 		; r3 = posicao relativa + corpohelicoptero[] 
+        loadi r5, r2 		; r5 = caracter para imprimir
+        outchar r5, r3
 
-        inc r1
-        inc r2
+        inc r1				; vou para o proximo elemento dos vetores
+        inc r2				; corpo e caracteres
         
         dec r6
         jnz DesenharHelicopteroLoop
@@ -443,13 +455,15 @@ MovimentaTodosHelicopteros:
 	push r5
 	push r6
 
-	loadn r1, #5
+	loadn r1, #5					; quantidade de helicopteros
 	loadn r0, #0
 
-	MovimentaTodosHelicopteros_Loop:
-		call MovimentaHelicoptero
+	MovimentaTodosHelicopteros_Loop:; for(int i = 0; i < 5; i++)
+		call MovimentaHelicoptero	; r0 é o parametro de indice
+
 		inc r0
 		dec r1
+
 		jnz MovimentaTodosHelicopteros_Loop
 
 	pop r6
@@ -471,18 +485,18 @@ MovimentaHelicoptero:
 	push r5
 	push r6
 
-	loadn r1, #posHelicopterosY
+	loadn r1, #posHelicopterosY		; So preciso do y para movimentar o helicoptero!
 	add r1, r0, r1
 	
 	loadi r2, r1
 
 	load r3, contadorFrames
-	loadn r4, #100
+	loadn r4, #100					; Movimenta o helicoptero a cada 100 frames
 	mod r3, r3, r4
 
 	jnz MovimentaHelicoptero_Fim
 
-	inc r2
+	inc r2							; move o helicoptero para baixo
 	storei r1, r2
 
 	loadn r4, #1
