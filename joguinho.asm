@@ -413,6 +413,11 @@ DesenhaHelicoptero:
 	loadi r0, r1
 	loadi r1, r2
 
+	; checa se o heliptero ja morreu
+	loadn r2, #2000
+	cmp r1, r2
+	jeq DesenharHelicoptero_Fim
+
     ; calcula posicao absoluta
     loadn r6, #40
     mul r1, r1, r6
@@ -439,14 +444,15 @@ DesenhaHelicoptero:
         dec r6
         jnz DesenharHelicopteroLoop
 
-    pop r6
-	pop r5
-	pop r4
-	pop r3
-	pop r2
-	pop r1
-	pop r0
-    rts
+	DesenharHelicoptero_Fim:
+		pop r6
+		pop r5
+		pop r4
+		pop r3
+		pop r2
+		pop r1
+		pop r0
+		rts
 
 MovimentaTodosHelicopteros:
 	push r0
@@ -498,8 +504,21 @@ MovimentaHelicoptero:
 
 	jnz MovimentaHelicoptero_Fim
 
+	; if(helicoptero_morto) return;
+	loadn r4, #2000 ; 2000 -> Helicoptero morto
+	cmp r2, r4
+	jeq MovimentaHelicoptero_Fim
+
 	inc r2							; move o helicoptero para baixo
-	storei r1, r2
+	loadn r4, #27
+	cmp r2, r4
+	jle MovimentaHelicoptero_Salvar ; if(!helicoptero_visivel) matar();
+
+	MovimentarHelicoptero_Matar:
+		loadn r2, #2000
+
+	MovimentaHelicoptero_Salvar:
+		storei r1, r2
 
 	loadn r4, #1
 	call ChecaColisaoHelicoptero
@@ -531,6 +550,8 @@ ChecaColisaoHelicoptero:
 	loadn r1, #posHelicopterosY
 	add r1, r1, r0
 	loadi r2, r1
+
+	; if(helicoptero_morto) return;
 	loadn r3, #2000
 	cmp r2, r3
 	jeq ChecaColisaoHelicoptero_Morto
@@ -617,6 +638,11 @@ ApagaHelicoptero:
 	loadi r0, r1
 	loadi r1, r2
 
+	; checa se morreu
+	loadn r2, #2000
+	cmp r1, r2
+	jeq ApagaHelicoptero_Fim
+
     ; calcula posicao absoluta
     loadn r6, #40
     mul r1, r1, r6
@@ -639,14 +665,15 @@ ApagaHelicoptero:
         dec r6
         jnz ApagaHelicopteroLoop
 
-    pop r6
-	pop r5
-	pop r4
-	pop r3
-	pop r2
-	pop r1
-	pop r0
-    rts
+	ApagaHelicoptero_Fim:
+		pop r6
+		pop r5
+		pop r4
+		pop r3
+		pop r2
+		pop r1
+		pop r0
+		rts
 
 ; r0: endereco corpo 1
 ; r1: tamanho corpo 1
