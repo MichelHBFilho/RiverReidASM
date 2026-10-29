@@ -608,14 +608,51 @@ DesenhaTodosHelicopteros:
 	push r5
 	push r6
 
-	loadn r1, #5
-	loadn r0, #0
+	loadn r0, #posHelicopterosX
+	loadn r1, #posHelicopterosY
+	loadn r2, #CorpoHelicotero
+	loadn r3, #CorpoHelicopteroCaracters
+
+	loadn r7, #5 				; quantidade helicopteros
 
 	DesenhaTodosHelicopteros_Loop:			; for(int i = 0; i < 5; i++)
-		call DesenhaHelicoptero
-		inc r0								; r0 é o argumento da função indica o indice do Helicoptero
-		dec r1								; inves de comparar eu vou decrementando o r1
-		jnz DesenhaTodosHelicopteros_Loop	; quando zerar r1 acabou
+		; if(combustivel_morto) continue;
+		loadn r6, #2000
+		loadi r5, r1
+		cmp r5, r6
+		jeq DesenhaTodosHelicopteros_Loop_Fim 
+
+		; calcula posicao absoluta em r4
+		loadi r4, r0
+		loadn r6, #40
+		mul r5, r5, r6
+		add r4, r4, r5
+		
+		loadn r6, #4 ; tamanho vetor corpo helicoptero
+		DesenhaTodosHelicopteros_Loop_Loop:
+			push r4							; protege o r4
+
+			; calcula posição do caracter da vez
+			loadi r5, r2
+			add r4, r4, r5
+
+			; carrega o caracter da vez
+			loadi r5, r3
+
+			outchar r5, r4
+
+			pop r4				; libera r4
+
+			inc r3				; incrementa o ponteiro dos vetores
+			inc r2
+			dec r6				; decrementa o contador
+			jnz DesenhaTodosHelicopteros_Loop_Loop	; if(r6 == 0) break;
+		loadn r3, #CorpoHelicopteroCaracters
+		loadn r2, #CorpoHelicotero
+
+		DesenhaTodosHelicopteros_Loop_Fim:
+			dec r7
+			jnz DesenhaTodosHelicopteros_Loop	; quando zerar r7 acabou
 
 	pop r6
 	pop r5
