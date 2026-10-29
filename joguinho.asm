@@ -663,67 +663,6 @@ DesenhaTodosHelicopteros:
 	pop r0
     rts
 
-; r0 = indice do helicoptero
-DesenhaHelicoptero:
-	push r0
-	push r1
-	push r2
-	push r3
-	push r4
-	push r5
-	push r6
-
-    loadn r1, #posHelicopterosX
-    loadn r2, #posHelicopterosY
-
-	; Aponta para o helicoptero certo
-	add r1, r0, r1
-	add r2, r0, r2
-
-	loadi r0, r1
-	loadi r1, r2
-
-	; checa se o heliptero ja morreu
-	loadn r2, #2000
-	cmp r1, r2
-	jeq DesenharHelicoptero_Fim
-
-    ; calcula posicao absoluta
-    loadn r6, #40
-    mul r1, r1, r6
-    add r0, r0, r1 ; r0 = posX + 40 * posY
-
-    ; carrega o vetor corpo nave
-    loadn r1, #CorpoHelicotero
-    loadn r2, #CorpoHelicopteroCaracters
-    
-	; eu nao gosto de guardar tao hardocodado o tamanho dos vetores
-    loadn r6, #4
-
-    DesenharHelicopteroLoop:; for(int i = 0; i < 4; i++)
-        mov r3, r0 			; colocar posicao absoluta em r3
-        loadi r4, r1 		; r4 = corpohelicoptero[]-> diferenca relativa
-
-        add r3, r3, r4 		; r3 = posicao relativa + corpohelicoptero[] 
-        loadi r5, r2 		; r5 = caracter para imprimir
-        outchar r5, r3
-
-        inc r1				; vou para o proximo elemento dos vetores
-        inc r2				; corpo e caracteres
-        
-        dec r6
-        jnz DesenharHelicopteroLoop
-
-	DesenharHelicoptero_Fim:
-		pop r6
-		pop r5
-		pop r4
-		pop r3
-		pop r2
-		pop r1
-		pop r0
-		rts
-
 MovimentaTodosHelicopteros:
 	push r0
 	push r1
@@ -733,25 +672,49 @@ MovimentaTodosHelicopteros:
 	push r5
 	push r6
 
-	loadn r1, #5					; quantidade de helicopteros
-	loadn r0, #0
+	load r0, contadorFrames
+	loadn r1, #100
+	mod r0, r0, r1
+	jnz MovimentaTodosHelicopteros_Fim
 
-	MovimentaTodosHelicopteros_Loop:; for(int i = 0; i < 5; i++)
-		call MovimentaHelicoptero	; r0 é o parametro de indice
+	loadn r0, #posHelicopterosY
+	loadn r1, #5 ; quantidade helicopteros
+	
+	; FLAGS
+	loadn r2, #27			; limite vertical
+	loadn r3, #2000		; flag de morto
 
-		inc r0
-		dec r1
+	MovimentaTodosHelicopteros_Loop:
+		; checa se morreu
+		loadi r4, r0
+		cmp r4, r3
+		jeq MovimentaTodosHelicopteros_Loop_Fim
 
-		jnz MovimentaTodosHelicopteros_Loop
+		inc r4			; move o helicoptero uma linha para baixo
 
-	pop r6
-	pop r5
-	pop r4
-	pop r3
-	pop r2
-	pop r1
-	pop r0
-    rts
+		cmp r4, r2		; if(helicoptero passou limites) matar()
+		jne MovimentaTodosHelicopteros_Loop_Salvar
+
+		MovimentaTodosHelicopteros_Loop_Matar:
+			mov r4, r3			; matou
+		MovimentaTodosHelicopteros_Loop_Salvar:
+			storei r0, r4		; salva o que quer que tenha acontecido com a posição
+		MovimentaTodosHelicopteros_Loop_Fim:
+			inc r0
+			dec r1
+			jnz MovimentaTodosHelicopteros_Loop
+
+	call ChecaColisaoTodosHelicopteros
+
+	MovimentaTodosHelicopteros_Fim:
+		pop r6
+		pop r5
+		pop r4
+		pop r3
+		pop r2
+		pop r1
+		pop r0
+		rts
 
 ; r0 = indice do helicoptero
 MovimentaHelicoptero:
@@ -804,6 +767,98 @@ MovimentaHelicoptero:
 		pop r1
 		pop r0
 		rts
+
+ChecaColisaoTodosHelicopteros:
+	push r0
+	push r1
+	push r2
+	push r3
+	push r4
+	push r5
+	push r6
+
+	loadn r0, #CorpoNave
+
+	; calcula pos absoluta da nave
+	load r1, posNaveX
+	load r2, posNaveY
+	loadn r3, #40
+	mul r2, r2, r3
+	add r1, r1, r2 ; r1 = pos absoluta da nave
+	
+	loadn r2, #CorpoHelicotero
+	loadn r3, #posHelicopterosX
+	loadn r4, #posHelicopterosY
+	; r5 vai guarda posicao absoluta helicoptero
+	; r6 auxiliar
+	
+	; o r7 eu dou push no primeiro loop
+	; para usar ele de contador no segundo loop tambem e no outro tambem
+	; puta gambiarra feia
+	loadn r7, #5	; r7 contador
+
+	ChecaColisaoTodosHelicopteros_Loop:
+		push r7
+
+		loadn r0, #CorpoNave			; reseta ponteiro da nave
+
+		loadi r5, r3					; r5 = x do helicoptero em questao
+		loadi r6, r4					; r6=  y do helicoptero em questao
+		loadn r7, #2000				; verifica se o helicoptero está morto
+
+		cmp r6, r7
+		jeq ChecaColisaoTodosHelicopteros_Loop_Fim	; if(morto) continue;
+
+		loadn r7, #40			
+		mul r6, r6, r7
+		add r5, r5, r6					; r5 = pos absoluta do helicoptero em questao
+
+		loadn r7, #5					; tamanho do vetor corpo nave
+		ChecaColisaoTodosHelicopteros_Loop2:
+			push r7				
+			push r1						; protege posicao absoluta da nave
+
+			loadn r2, #CorpoHelicotero	; reseta ponteiro do helicoptero
+
+			loadi r6, r0				; calcula posicao da parte especifica da nave
+			add r1, r1, r6
+
+			loadn r7, #4				; tamanho do vetor corpo helicoptero
+			ChecaColisaoTodosHelicopteros_Loop3:
+				push r5					; protege posicao do helicoptero
+
+				loadi r6, r2			
+				add r5, r5, r6			; calcula posicao da parte em questao
+				cmp r1, r5				; se igual gameover
+				jeq GameOver			; a rotina de gameover cuida da pilha bagunçada
+
+				pop r5
+				inc r2					; avanca ponteiro corpo helicoptero
+				dec r7
+				jnz ChecaColisaoTodosHelicopteros_Loop3
+
+			pop r1
+			pop r7
+			inc r0						; avanca ponteiro corpo nave
+			dec r7
+			jnz ChecaColisaoTodosHelicopteros_Loop2
+
+		
+		ChecaColisaoTodosHelicopteros_Loop_Fim:
+			pop r7
+			inc r3
+			inc r4
+			dec r7
+			jnz ChecaColisaoTodosHelicopteros_Loop
+
+	pop r6
+	pop r5
+	pop r4
+	pop r3
+	pop r2
+	pop r1
+	pop r0
+	rts
 
 ; r0 = indice do helicoptero
 ; r7 = retorno
@@ -872,14 +927,47 @@ ApagaTodosHelicopteros:
 	push r5
 	push r6
 
-	loadn r1, #5
-	loadn r0, #0
+	loadn r0, #posHelicopterosX
+	loadn r1, #posHelicopterosY
+	loadn r2, #CorpoHelicotero
+	loadn r3, #' '
 
-	ApagaTodosHelicopteros_Loop:
-		call ApagaHelicoptero
-		inc r0
-		dec r1
-		jnz ApagaTodosHelicopteros_Loop
+	loadn r7, #5 				; quantidade helicopteros
+
+	ApagaTodosHelicopteros_Loop:			; for(int i = 0; i < 5; i++)
+		; if(combustivel_morto) continue;
+		loadn r6, #2000
+		loadi r5, r1
+		cmp r5, r6
+		jeq ApagaTodosHelicopteros_Loop_Fim 
+
+		; calcula posicao absoluta em r4
+		loadi r4, r0
+		loadn r6, #40
+		mul r5, r5, r6
+		add r4, r4, r5
+		
+		loadn r6, #4 ; tamanho vetor corpo helicoptero
+		ApagaTodosHelicopteros_Loop_Loop:
+			push r4							; protege o r4
+
+			; calcula posição do caracter da vez
+			loadi r5, r2
+			add r4, r4, r5
+
+			outchar r3, r4
+
+			pop r4				; libera r4
+
+			; incrementa o ponteiro dos vetores
+			inc r2
+			dec r6				; decrementa o contador
+			jnz ApagaTodosHelicopteros_Loop_Loop	; if(r6 == 0) break;
+		loadn r2, #CorpoHelicotero
+
+		ApagaTodosHelicopteros_Loop_Fim:
+			dec r7
+			jnz ApagaTodosHelicopteros_Loop	; quando zerar r7 acabou
 
 	pop r6
 	pop r5
@@ -889,61 +977,6 @@ ApagaTodosHelicopteros:
 	pop r1
 	pop r0
     rts
-
-ApagaHelicoptero:
-	push r0
-	push r1
-	push r2
-	push r3
-	push r4
-	push r5
-	push r6
-
-    loadn r1, #posHelicopterosX
-    loadn r2, #posHelicopterosY
-
-	add r1, r1, r0
-	add r2, r2, r0
-
-	loadi r0, r1
-	loadi r1, r2
-
-	; checa se morreu
-	loadn r2, #2000
-	cmp r1, r2
-	jeq ApagaHelicoptero_Fim
-
-    ; calcula posicao absoluta
-    loadn r6, #40
-    mul r1, r1, r6
-    add r0, r0, r1 ; r0 = posX + 40 * posY
-
-    ; carrega o vetor corpo nave
-    loadn r1, #CorpoHelicotero
-    loadn r5, #' '
-
-    loadn r6, #4
-
-    ApagaHelicopteroLoop:
-        mov r3, r0 ; posicao absoluta em r3
-        loadi r4, r1 ; r4 = offset relativo
-        add r3, r3, r4
-
-        outchar r5, r3
-
-        inc r1
-        dec r6
-        jnz ApagaHelicopteroLoop
-
-	ApagaHelicoptero_Fim:
-		pop r6
-		pop r5
-		pop r4
-		pop r3
-		pop r2
-		pop r1
-		pop r0
-		rts
 
 ; r0: endereco corpo 1
 ; r1: tamanho corpo 1
