@@ -21,6 +21,17 @@ jmp main
 	posNaveY: var #1
 
 	combustivelNave: var #1 		; 0-30
+
+	; Três combustiveis ao maximo na tela ao mesmo tempo
+	CombustivelObjetoCaracter: var #1
+		static CombustivelObjetoCaracter + #0, #'F'
+	posCombustiveisX: var #3
+	posCombustiveisY: var #3
+		
+	; 3 tiros ao mesmo tempo na tela parece razoavel
+	posTirosX: var #3
+	posTirosY: var #3
+	CorpoTiroCaracter: string "a"
 ; ======================
 ; Variaveis Helicopteros
 ; ======================
@@ -53,6 +64,11 @@ main:
 	store posHelicopterosX, r0
 	store posHelicopterosY, r1
 
+	loadn r0, #17
+	loadn r1, #10
+	store posCombustiveisX, r0
+	store posCombustiveisY, r1
+
 	mainLoop:
 		call Desenha
 		call ConsomeCombustivel
@@ -60,6 +76,7 @@ main:
 		call Apaga
 		call MovimentaNave
 		call MovimentaTodosHelicopteros
+		call MovimentaTodosObjetoCombustivel
 		call IncrementaContadorFrames
 		jmp mainLoop
 
@@ -112,6 +129,7 @@ Desenha:
 
 	call DesenharNave
 	call DesenhaTodosHelicopteros
+	call DesenhaTodosObjetoCombustivel
 
 	pop r6
 	pop r5
@@ -361,6 +379,109 @@ DesenhaCombustivel:
 	pop r1
 	pop r0
 	rts
+
+DesenhaTodosObjetoCombustivel:
+	push r0
+	push r1
+	push r2
+	push r3
+	push r4
+	push r5
+	push r6
+
+	loadn r0, #posCombustiveisX
+	loadn r1, #posCombustiveisY
+	loadn r2, #3
+	load r6, CombustivelObjetoCaracter
+
+	DesenhaObjetoCombustivel_Loop:
+		loadi r3, r0
+		loadi r4, r1
+		loadn r5, #2000
+		cmp r4, r5
+		jeq DesenhaObjetoCombustivel_Loop_Fim
+
+		loadn r5, #40
+
+		mul r4, r4, r5
+		add r3, r3, r4
+		outchar r6, r3
+
+		DesenhaObjetoCombustivel_Loop_Fim:
+			inc r0
+			inc r1
+			dec r2
+			jnz DesenhaObjetoCombustivel_Loop
+
+	pop r6
+	pop r5
+	pop r4
+	pop r3
+	pop r2
+	pop r1
+	pop r0
+	rts
+
+MovimentaTodosObjetoCombustivel:
+	push r0
+	push r1
+	push r2
+	push r3
+	push r4
+	push r5
+	push r6
+
+	loadn r0, #posCombustiveisX
+	loadn r1, #posCombustiveisY
+	loadn r2, #3
+	loadn r6, #' '
+
+	load r3, contadorFrames
+	loadn r4, #100
+	mod r3, r3, r4
+	jnz MovimentaTodosObjetoCombustivel_Fim
+
+	MovimentaTodosObjetoCombustivel_Loop:
+		loadi r3, r0
+		loadi r4, r1
+
+		; checa se morreu
+		loadn r5, #2000
+		cmp r4, r5
+		jeq MovimentaTodosHelicopteros_Loop_Fim
+
+		loadn r5, #40
+
+		mul r4, r4, r5
+		add r3, r3, r4
+		outchar r6, r3					; Apaga o combustivel
+
+		; Atualizo o y do combustivel e storo
+		loadi r4, r1
+		inc r4
+
+		loadn r5, #28 					; Se passou disso sem tocar aviao some
+		cmp r4, r5
+		jne MovimentaTodosHelicopteros_Loop_Salva
+		loadn r4, #2000
+
+		MovimentaTodosHelicopteros_Loop_Salva:
+			storei r1, r4
+		MovimentaTodosHelicopteros_Loop_Fim:
+			inc r0
+			inc r1
+			dec r2
+			jnz DesenhaObjetoCombustivel_Loop
+
+	MovimentaTodosObjetoCombustivel_Fim:
+		pop r6
+		pop r5
+		pop r4
+		pop r3
+		pop r2
+		pop r1
+		pop r0
+		rts
 
 ; ======================
 ;  Funções Helicopteros
