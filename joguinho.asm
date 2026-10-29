@@ -399,14 +399,18 @@ DesenhaTodosObjetoCombustivel:
 	DesenhaObjetoCombustivel_Loop:
 		loadi r3, r0
 		loadi r4, r1
+
+		; Checa se o combustivel está morto
+		; se estiver morto não tem que desenahr
 		loadn r5, #2000
 		cmp r4, r5
 		jeq DesenhaObjetoCombustivel_Loop_Fim
 
+		; calcula posição absoluta
 		loadn r5, #40
-
 		mul r4, r4, r5
 		add r3, r3, r4
+
 		outchar r6, r3
 
 		DesenhaObjetoCombustivel_Loop_Fim:
