@@ -25,6 +25,8 @@ jmp main
 	; Três combustiveis ao maximo na tela ao mesmo tempo
 	CombustivelObjetoCaracter: var #1
 		static CombustivelObjetoCaracter + #0, #'F'
+	CorpoCombustivelObjeto: var #1
+		static CorpoCombustivelObjeto + #0, #0
 	posCombustiveisX: var #3
 	posCombustiveisY: var #3
 		
@@ -448,7 +450,7 @@ MovimentaTodosObjetoCombustivel:
 		; checa se morreu
 		loadn r5, #2000
 		cmp r4, r5
-		jeq MovimentaTodosHelicopteros_Loop_Fim
+		jeq MovimentaTodosObjetoCombustivel_Loop_Fim
 
 		loadn r5, #40
 
@@ -462,18 +464,124 @@ MovimentaTodosObjetoCombustivel:
 
 		loadn r5, #28 					; Se passou disso sem tocar aviao some
 		cmp r4, r5
-		jne MovimentaTodosHelicopteros_Loop_Salva
+		jne MovimentaTodosObjetoCombustivel_Loop_Salva
 		loadn r4, #2000
 
-		MovimentaTodosHelicopteros_Loop_Salva:
+		MovimentaTodosObjetoCombustivel_Loop_Salva:
 			storei r1, r4
-		MovimentaTodosHelicopteros_Loop_Fim:
+		MovimentaTodosObjetoCombustivel_Loop_Fim:
 			inc r0
 			inc r1
 			dec r2
-			jnz DesenhaObjetoCombustivel_Loop
+			jnz MovimentaTodosObjetoCombustivel_Loop
+
+	call ChecaColisaoTodosObjetoCombustivel
 
 	MovimentaTodosObjetoCombustivel_Fim:
+		pop r6
+		pop r5
+		pop r4
+		pop r3
+		pop r2
+		pop r1
+		pop r0
+		rts
+
+ChecaColisaoTodosObjetoCombustivel:
+	push r0
+	push r1
+
+	loadn r0, #0
+	loadn r1, #3
+
+	ChecaColisaoTodosObjetoCombustivel_Loop:
+		call ChecaColisaoObjetoCombustivel
+		inc r0
+		dec r1
+		jnz ChecaColisaoTodosObjetoCombustivel_Loop
+
+	pop r1
+	pop r0
+	rts
+
+; r0 = indice
+ChecaColisaoObjetoCombustivel:
+	push r0
+	push r1
+	push r2
+	push r3
+	push r4
+	push r5
+	push r6
+
+	push r0 					; salva o indice pra usar no fim da rotina
+
+	; Y do combustivel
+	loadn r1, #posCombustiveisY
+	add r1, r1, r0
+	loadi r2, r1
+
+	; if(combustivel_morto) return;
+	loadn r3, #2000
+	cmp r2, r3
+	jeq ChecaColisaoObjetoCombustivel_Morto
+
+	; X do helicoptero
+	loadn r1, #posCombustiveisX
+	add r1, r1, r0
+	loadi r1, r1
+
+	; r5 = pos abs combustivel
+	loadn r3, #40
+	mul r2, r2, r3
+	add r5, r1, r2
+
+	; r2 = pos abs nave
+	load r2, posNaveX
+	load r3, posNaveY
+	loadn r4, #40
+	mul r3, r3, r4
+	add r2, r2, r3
+
+	loadn r0, #CorpoNave
+	loadn r1, #5
+	loadn r3, #CorpoCombustivelObjeto
+	loadn r4, #1
+	call ChecaColisao
+
+	pop r3 						; pega o indice salvo
+
+	; if(bateu)
+	loadn r0, #1
+	cmp r7, r0
+	jne ChecaColisaoObjetoCombustivel_Fim ; if(!colidiu) return;
+
+	; mata combustivel que colidiu 
+	loadn r0, #posCombustiveisY
+	add r0, r0, r3				; aponta para o combustivel certo
+	loadn r1, #2000 
+	storei r0, r1				; mata
+
+	load r0, combustivelNave
+	loadn r1, #10 				; aumenta 10 no combustivel
+	add r0, r0, r1
+	loadn r2, #30				
+	cmp r0, r2					; checa se passou do limite
+
+	jle ChecaColisaoObjetoCombustivel_SalvaCombustivel
+	mov r0, r2
+
+	ChecaColisaoObjetoCombustivel_SalvaCombustivel:
+		store combustivelNave, r0
+		call DesenhaCombustivel	; como mudou tem que atualizar
+
+	jmp ChecaColisaoObjetoCombustivel_Fim
+
+	ChecaColisaoObjetoCombustivel_Morto:
+		pop r0 							; não usou indice salvo
+		loadn r7, #0
+
+	ChecaColisaoObjetoCombustivel_Fim:
 		pop r6
 		pop r5
 		pop r4
