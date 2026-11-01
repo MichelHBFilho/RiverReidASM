@@ -494,19 +494,78 @@ MovimentaTodosObjetoCombustivel:
 ChecaColisaoTodosObjetoCombustivel:
 	push r0
 	push r1
+	push r2
+	push r3
+	push r4
+	push r5
+	push r6
 
-	loadn r0, #0
-	loadn r1, #3
+	load r0, posNaveX
+	load r1, posNaveY
+	loadn r2, #40
+	mul r1, r1, r2
+	add r0, r0, r1			; pos nave em r0
+
+	loadn r6, #3 ; quantidade de objetos combustivel
+	loadn r1, #posCombustiveisX
+	loadn r2, #posCombustiveisY
+	; pos absoluta combustivel em r3
 
 	ChecaColisaoTodosObjetoCombustivel_Loop:
-		call ChecaColisaoObjetoCombustivel
-		inc r0
-		dec r1
-		jnz ChecaColisaoTodosObjetoCombustivel_Loop
+		loadi r3, r1
+		loadi r4, r2
 
-	pop r1
-	pop r0
-	rts
+		loadn r5, #2000		; verifica se esta morto
+		cmp r4, r5
+		jeq ChecaColisaoTodosObjetoCombustivel_Loop_Fim
+	
+		loadn r5, #40
+		mul r4, r4, r5
+		add r3, r3, r4			; pos aboluta do combustivel em questao em r3
+
+		loadn r4, #CorpoNave
+		loadn r5, #5 			; tamanho corpo nave
+		ChecaColisaoTodosObjetoCombustivel_Loop2:
+			push r0
+
+			loadi r7, r4
+			add r0, r0, r7
+			cmp r0, r3
+			jeq ChecaColisaoTodosObjetoCombustivel_Bateu
+
+			pop r0
+			inc r4
+			dec r5
+			jnz ChecaColisaoTodosObjetoCombustivel_Loop2
+
+		ChecaColisaoTodosObjetoCombustivel_Loop_Fim:
+			inc r1
+			inc r2
+			dec r6
+			jnz ChecaColisaoTodosObjetoCombustivel_Loop
+
+	jmp ChecaColisaoTodosObjetoCombustivel_Fim
+	
+	ChecaColisaoTodosObjetoCombustivel_Bateu:
+		pop r0 	; se não vai dar problema!
+		loadn r0, #2000		; mata o combustivel em questão
+		storei r2, r0
+
+		load r0, combustivelNave
+		loadn r1, #5 			 ; soma 5 no combustivel da nave
+		add r0, r0, r1
+		store combustivelNave, r0
+		call DesenhaCombustivel
+
+	ChecaColisaoTodosObjetoCombustivel_Fim:
+		pop r6
+		pop r5
+		pop r4
+		pop r3
+		pop r2
+		pop r1
+		pop r0
+		rts
 
 ; r0 = indice
 ChecaColisaoObjetoCombustivel:
@@ -716,58 +775,6 @@ MovimentaTodosHelicopteros:
 		pop r0
 		rts
 
-; r0 = indice do helicoptero
-MovimentaHelicoptero:
-	push r0
-	push r1
-	push r2
-	push r3
-	push r4
-	push r5
-	push r6
-
-	loadn r1, #posHelicopterosY		; So preciso do y para movimentar o helicoptero!
-	add r1, r0, r1
-	
-	loadi r2, r1
-
-	load r3, contadorFrames
-	loadn r4, #100					; Movimenta o helicoptero a cada 100 frames
-	mod r3, r3, r4
-
-	jnz MovimentaHelicoptero_Fim
-
-	; if(helicoptero_morto) return;
-	loadn r4, #2000 ; 2000 -> Helicoptero morto
-	cmp r2, r4
-	jeq MovimentaHelicoptero_Fim
-
-	inc r2							; move o helicoptero para baixo
-	loadn r4, #27
-	cmp r2, r4
-	jle MovimentaHelicoptero_Salvar ; if(!helicoptero_visivel) matar();
-
-	MovimentarHelicoptero_Matar:
-		loadn r2, #2000
-
-	MovimentaHelicoptero_Salvar:
-		storei r1, r2
-
-	loadn r4, #1
-	call ChecaColisaoHelicoptero
-	cmp r7, r4
-	jeq GameOver
-
-	MovimentaHelicoptero_Fim:
-		pop r6
-		pop r5
-		pop r4
-		pop r3
-		pop r2
-		pop r1
-		pop r0
-		rts
-
 ChecaColisaoTodosHelicopteros:
 	push r0
 	push r1
@@ -859,64 +866,6 @@ ChecaColisaoTodosHelicopteros:
 	pop r1
 	pop r0
 	rts
-
-; r0 = indice do helicoptero
-; r7 = retorno
-ChecaColisaoHelicoptero:
-	push r0
-	push r1
-	push r2
-	push r3
-	push r4
-	push r5
-	push r6
-
-	; Y do helicoptero
-	loadn r1, #posHelicopterosY
-	add r1, r1, r0
-	loadi r2, r1
-
-	; if(helicoptero_morto) return;
-	loadn r3, #2000
-	cmp r2, r3
-	jeq ChecaColisaoHelicoptero_Morto
-
-	; X do helicoptero
-	loadn r1, #posHelicopterosX
-	add r1, r1, r0
-	loadi r1, r1
-
-	; r5 = pos abs helicoptero
-	loadn r3, #40
-	mul r2, r2, r3
-	add r5, r1, r2
-
-	; r2 = pos abs nave
-	load r2, posNaveX
-	load r3, posNaveY
-	loadn r4, #40
-	mul r3, r3, r4
-	add r2, r2, r3
-
-	loadn r0, #CorpoNave
-	loadn r1, #5
-	loadn r3, #CorpoHelicotero
-	loadn r4, #4
-	call ChecaColisao
-	jmp ChecaColisaoHelicoptero_Fim
-
-	ChecaColisaoHelicoptero_Morto:
-		loadn r7, #0
-
-	ChecaColisaoHelicoptero_Fim:
-		pop r6
-		pop r5
-		pop r4
-		pop r3
-		pop r2
-		pop r1
-		pop r0
-		rts
 
 ApagaTodosHelicopteros:
 	push r0
@@ -1107,3 +1056,5 @@ ApagaTela:
 	pop r1
 	pop r0
 	rts	
+
+jmp main
