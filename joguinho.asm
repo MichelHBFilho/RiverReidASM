@@ -33,7 +33,7 @@ jmp main
 	; 3 tiros ao mesmo tempo na tela parece razoavel
 	posTirosX: var #3
 	posTirosY: var #3
-	CorpoTiroCaracter: string "a"
+	CorpoTiroCaracter: string "A"
 ; ======================
 ; Variaveis Helicopteros
 ; ======================
@@ -54,22 +54,7 @@ contadorFrames: var #1						; Conta frames para operar
 
 main:
 	call ApagaTela
-    loadn r0, #20 				; Nasce no centro da tela
-    loadn r1, #25 				; Y sempre fica em 27
-	loadn r2, #30 				; comeca com o maximo de combustivel
-    store posNaveX, r0
-    store posNaveY, r1
-	store combustivelNave, r2	
-
-	loadn r0, #20
-	loadn r1, #6
-	store posHelicopterosX, r0
-	store posHelicopterosY, r1
-
-	loadn r0, #17
-	loadn r1, #10
-	store posCombustiveisX, r0
-	store posCombustiveisY, r1
+    call ResetaVariaveis
 
 	mainLoop:
 		call Desenha
@@ -77,12 +62,50 @@ main:
 		call Delay
 		call Apaga
 		call MovimentaNave
+		call MovimentaTodosTiros
 		call MovimentaTodosHelicopteros
 		call MovimentaTodosObjetoCombustivel
 		call IncrementaContadorFrames
 		jmp mainLoop
 
     halt
+
+ResetaVariaveis:
+	loadn r0, #20 				; Nasce no centro da tela
+    loadn r1, #25 				; Y sempre fica em 27
+	loadn r2, #30 				; comeca com o maximo de combustivel
+    store posNaveX, r0
+    store posNaveY, r1
+	store combustivelNave, r2	
+
+	loadn r0, #2000
+	loadn r1, #posCombustiveisY
+	loadn r2, #3				; quantidade de combustiveis
+	ResetaVariaveis_MataCombustivel:
+		storei r1, r0
+		inc r1
+		dec r2
+		jnz ResetaVariaveis_MataCombustivel
+
+	loadn r0, #2000
+	loadn r1, #posHelicopterosY
+	loadn r2, #5				; quantidade de helicopteros
+	ResetaVariaveis_MataHelicoptero:
+		storei r1, r0
+		inc r1
+		dec r2
+		jnz ResetaVariaveis_MataHelicoptero
+
+	loadn r0, #2000
+	loadn r1, #posTirosY
+	loadn r2, #3				; quantidade de tiros
+	ResetaVariaveis_MataTiros:
+		storei r1, r0
+		inc r1
+		dec r2
+		jnz ResetaVariaveis_MataTiros
+
+	rts
 
 IncrementaContadorFrames:
 	push r0
@@ -132,6 +155,7 @@ Desenha:
 	call DesenharNave
 	call DesenhaTodosHelicopteros
 	call DesenhaTodosObjetoCombustivel
+	call DesenhaTodosTiros
 
 	pop r6
 	pop r5
@@ -153,6 +177,7 @@ Apaga:
 
 	call ApagaNave
 	call ApagaTodosHelicopteros
+	call ApagaTodosTiros
 
 	pop r6
 	pop r5
@@ -274,6 +299,9 @@ MovimentaNave:
 	loadn r1, #'d'
 	cmp r0, r1
 	jeq MovimentaDireita
+	loadn r1, #' '
+	cmp r0, r1
+	ceq Atirar
 	jmp MovimentaFim
 
 	MovimentaEsquerda:
@@ -567,8 +595,7 @@ ChecaColisaoTodosObjetoCombustivel:
 		pop r0
 		rts
 
-; r0 = indice
-ChecaColisaoObjetoCombustivel:
+Atirar:
 	push r0
 	push r1
 	push r2
@@ -577,74 +604,158 @@ ChecaColisaoObjetoCombustivel:
 	push r5
 	push r6
 
-	push r0 					; salva o indice pra usar no fim da rotina
+	load r0, posNaveX		; o tiro nasce uma linha acima da nave
+	load r1, posNaveY
+	dec r1					; sobe uma linha
 
-	; Y do combustivel
-	loadn r1, #posCombustiveisY
-	add r1, r1, r0
-	loadi r2, r1
+	loadn r2, #2000	   ; flag de morto
+	loadn r3, #3			; quantidade de tiros
+	loadn r4, #posTirosX
+	loadn r5, #posTirosY
+	Atirar_ProcuraPosicaoLivre:
+		loadi r6, r5
+		cmp r6, r2
+		jeq Atirar_Salvar
 
-	; if(combustivel_morto) return;
-	loadn r3, #2000
-	cmp r2, r3
-	jeq ChecaColisaoObjetoCombustivel_Morto
+		inc r4
+		inc r5
+		dec r3
+		jnz Atirar_ProcuraPosicaoLivre
 
-	; X do helicoptero
-	loadn r1, #posCombustiveisX
-	add r1, r1, r0
-	loadi r1, r1
+	; chegou aqui não encontrou espaço livre mata o mais antigo, que é o 0
+	loadn r4, #posTirosX
+	loadn r5, #posTirosY
 
-	; r5 = pos abs combustivel
-	loadn r3, #40
-	mul r2, r2, r3
-	add r5, r1, r2
+	Atirar_Salvar:			; quando chegar aqui o r4 e r5 vao guardar o endereco 
+		storei r4, r0
+		storei r5, r1
 
-	; r2 = pos abs nave
-	load r2, posNaveX
-	load r3, posNaveY
-	loadn r4, #40
-	mul r3, r3, r4
-	add r2, r2, r3
+	pop r6
+	pop r5
+	pop r4
+	pop r3
+	pop r2
+	pop r1
+	pop r0
+	rts
 
-	loadn r0, #CorpoNave
-	loadn r1, #5
-	loadn r3, #CorpoCombustivelObjeto
-	loadn r4, #1
-	call ChecaColisao
+DesenhaTodosTiros:
+	push r0
+	push r1
+	push r2
+	push r3
+	push r4
+	push r5
+	push r6
 
-	pop r3 						; pega o indice salvo
+	loadn r0, #posTirosX
+	loadn r1, #posTirosY
+	load r2, CorpoTiroCaracter
+	loadn r3, #3				; quantidade de tiros
+	DesenhaTodosTiros_Loop:
+		loadi r4, r1 ; y primeiro checa morte
+		loadn r5, #2000 ; flag morto
+		cmp r4, r5
+		jeq DesenhaTodosTiros_Loop_Fim
 
-	; if(bateu)
-	loadn r0, #1
-	cmp r7, r0
-	jne ChecaColisaoObjetoCombustivel_Fim ; if(!colidiu) return;
+		loadn r5, #40
+		mul r4, r4, r5
+		loadi r5, r0
+		add r4, r4, r5 			; pos absoluta em r4
 
-	; mata combustivel que colidiu 
-	loadn r0, #posCombustiveisY
-	add r0, r0, r3				; aponta para o combustivel certo
-	loadn r1, #2000 
-	storei r0, r1				; mata
+		outchar r2, r4
 
-	load r0, combustivelNave
-	loadn r1, #10 				; aumenta 10 no combustivel
-	add r0, r0, r1
-	loadn r2, #30				
-	cmp r0, r2					; checa se passou do limite
+		DesenhaTodosTiros_Loop_Fim:
+			inc r0
+			inc r1
+			dec r3
+			jnz DesenhaTodosTiros_Loop
 
-	jle ChecaColisaoObjetoCombustivel_SalvaCombustivel
-	mov r0, r2
+	DesenhaTodosTiros_Fim:
+		pop r6
+		pop r5
+		pop r4
+		pop r3
+		pop r2
+		pop r1
+		pop r0
+		rts
 
-	ChecaColisaoObjetoCombustivel_SalvaCombustivel:
-		store combustivelNave, r0
-		call DesenhaCombustivel	; como mudou tem que atualizar
+ApagaTodosTiros:
+	push r0
+	push r1
+	push r2
+	push r3
+	push r4
+	push r5
+	push r6
 
-	jmp ChecaColisaoObjetoCombustivel_Fim
+	loadn r0, #posTirosX
+	loadn r1, #posTirosY
+	loadn r2, #' '
+	loadn r3, #3				; quantidade de tiros
+	ApagaTodosTiros_Loop:
+		loadi r4, r1 ; y primeiro checa morte
+		loadn r5, #2000 ; flag morto
+		cmp r4, r5
+		jeq ApagaTodosTiros_Loop_Fim
 
-	ChecaColisaoObjetoCombustivel_Morto:
-		pop r0 							; não usou indice salvo
-		loadn r7, #0
+		loadn r5, #40
+		mul r4, r4, r5
+		loadi r5, r0
+		add r4, r4, r5 			; pos absoluta em r4
 
-	ChecaColisaoObjetoCombustivel_Fim:
+		outchar r2, r4
+
+		ApagaTodosTiros_Loop_Fim:
+			inc r0
+			inc r1
+			dec r3
+			jnz ApagaTodosTiros_Loop
+
+	ApagaTodosTiros_Fim:
+		pop r6
+		pop r5
+		pop r4
+		pop r3
+		pop r2
+		pop r1
+		pop r0
+		rts
+
+MovimentaTodosTiros:
+	push r0
+	push r1
+	push r2
+	push r3
+	push r4
+	push r5
+	push r6
+
+	loadn r0, #posTirosY
+	loadn r1, #2000		; flag de morto
+	loadn r2, #3			 ; quantidae de tiros
+
+	MovimentaTodosTiros_Loop:
+		loadi r3, r0
+		cmp r3, r1
+		jeq MovimentaTodosTiros_Loop_Fim
+
+		dec r3
+		jz MovimentaTodosTiros_Matar
+		jmp MovimentaTodosTiros_Salvar
+		
+		MovimentaTodosTiros_Matar:
+			mov r3, r1
+		MovimentaTodosTiros_Salvar:
+			storei r0, r3
+		MovimentaTodosTiros_Loop_Fim:
+			inc r0
+			dec r2
+			jnz MovimentaTodosTiros_Loop
+
+
+	MovimentaTodosTiros_Fim:
 		pop r6
 		pop r5
 		pop r4
@@ -926,63 +1037,6 @@ ApagaTodosHelicopteros:
 	pop r1
 	pop r0
     rts
-
-; r0: endereco corpo 1
-; r1: tamanho corpo 1
-; r2: pos absoluta corpo 1
-; r3: endereco corpo 2
-; r4: tamanho corpo 2
-; r5: pos absoluta corpo 2
-; r7: retorno
-ChecaColisao:
-	push r0
-	push r1
-	push r2
-	push r3
-	push r4
-	push r5
-	push r6
-
-	ChecaColisao_Loop1:
-		loadi r6, r0
-		add r6, r6, r2
-
-		push r3
-		push r4
-
-		ChecaColisao_Loop2:
-			loadi r7, r3
-			add r7, r7, r5
-			cmp r6, r7
-			jeq ChecaColisao_Colidiu
-			inc r3
-			dec r4
-			jnz ChecaColisao_Loop2
-
-		pop r4
-		pop r3
-
-		inc r0
-		dec r1
-		jnz ChecaColisao_Loop1
-
-	loadn r7, #0				; terminou os dois loops sem bater
-	jmp ChecaColisao_Fim
-
-	ChecaColisao_Colidiu:
-		pop r4					; desempilha o que o Loop1 deixou
-		pop r3
-		loadn r7, #1
-
-	ChecaColisao_Fim:
-		pop r6
-		pop r5
-		pop r4
-		pop r3
-		pop r2
-		pop r1
-		pop r0
-		rts
 
 Delay:
     push r0
