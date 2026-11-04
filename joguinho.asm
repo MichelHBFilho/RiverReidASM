@@ -65,7 +65,6 @@ main:
 		call Desenha
 		call ConsomeCombustivel
 		call Delay
-		call Apaga
 		call MovimentaNave
 		call MovimentaTodosTiros
 		call MovimentaTodosHelicopteros
@@ -310,6 +309,8 @@ MovimentaNave:
 	jmp MovimentaFim
 
 	MovimentaEsquerda:
+		call ApagaNave		; apago a nave se mexer
+
 		load r0, posNaveX
 		loadn r1, #1		; Limite a esquerda
 
@@ -317,9 +318,12 @@ MovimentaNave:
 		cmp r0, r1 			; if(posX < 1) return
 		jle MovimentaFim
 		store posNaveX, r0
+
 		jmp MovimentaFim
 
 	MovimentaDireita:
+		call ApagaNave
+
 		load r0, posNaveX
 		loadn r1, #38		; Limite a direita
 
@@ -372,6 +376,7 @@ ConsomeCombustivel:
 		pop r0
 		rts
 
+; apaga e redesenha!
 DesenhaCombustivel:
 	push r0
 	push r1
@@ -461,6 +466,7 @@ DesenhaTodosObjetoCombustivel:
 	pop r0
 	rts
 
+; essa subrotina tambem apaga o combustivel
 MovimentaTodosObjetoCombustivel:
 	push r0
 	push r1
@@ -737,6 +743,8 @@ MovimentaTodosTiros:
 	push r5
 	push r6
 
+	call ApagaTodosTiros
+
 	loadn r0, #posTirosY
 	loadn r1, #2000		; flag de morto
 	loadn r2, #3			 ; quantidae de tiros
@@ -840,6 +848,9 @@ ChecaColisaoTodosTiros:
 				pop r1	; ficou do loop
 				pop r2	; recupera o endereco do Y do helicoptero que morreu
 				pop r1
+
+				call ApagaTodosHelicopteros	; apaga todos os helicopteros da tela
+				; somente os vivos serão redesenhados!
 
 				loadn r6, #2000	; flag morto
 				storei r2, r6	; mata o helicoptero
@@ -977,6 +988,8 @@ MovimentaTodosHelicopteros:
 	loadn r1, #100
 	mod r0, r0, r1
 	jnz MovimentaTodosHelicopteros_Fim
+
+	call ApagaTodosHelicopteros			; helicoptero vai mover, então apago ele
 
 	loadn r0, #posHelicopterosY
 	loadn r1, #5 ; quantidade helicopteros
