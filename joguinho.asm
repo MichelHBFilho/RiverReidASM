@@ -56,6 +56,11 @@ main:
 	call ApagaTela
     call ResetaVariaveis
 
+	loadn r0, #10
+	loadn r1, #8
+	store posHelicopterosX, r0
+	store posHelicopterosY, r1
+
 	mainLoop:
 		call Desenha
 		call ConsomeCombustivel
@@ -754,6 +759,7 @@ MovimentaTodosTiros:
 			dec r2
 			jnz MovimentaTodosTiros_Loop
 
+	call ChecaColisaoTodosTiros
 
 	MovimentaTodosTiros_Fim:
 		pop r6
@@ -764,6 +770,131 @@ MovimentaTodosTiros:
 		pop r1
 		pop r0
 		rts
+
+ChecaColisaoTodosTiros:
+	push r0
+	push r1
+	push r2
+	push r3
+	push r4
+	push r5
+	push r6	
+
+	loadn r0, #posTirosX
+	loadn r1, #posTirosY
+	loadn r2, #3		; quantidade de tiros
+
+	ChecaColisaoTodosTiros_Loop:
+		push r0			; preciso de mais registradores, salvo esses valores
+		push r1
+		push r2
+
+		; calcular posicao absoluta do tiro em questao
+		loadi r0, r0
+		loadi r1, r1
+
+		loadn r2, #2000	; flag de morto
+		cmp r1, r2
+		jeq ChecaColisaoTodosTiros_Loop_Fim	; não testa tiro que não existe
+
+		loadn r2, #40
+		mul r1, r1, r2
+		
+		add r0, r0, r1	; pos absoluta do tiro em r0
+
+		; essa parte do loop cuida da colisao com helicopteros
+		loadn r1, #posHelicopterosX
+		loadn r2, #posHelicopterosY
+		loadn r3, #5 				; quantidade de helicopteros
+		ChecaColisaoTodosTiros_Loop_Helicopteros:
+			push r1
+			push r2
+
+			loadi r1, r1
+			loadi r2, r2
+			loadn r6, #2000			; flag de morto
+			cmp r2, r6
+			jeq ChecaColisaoTodosTiros_Loop_Helicopteros_Fim
+			loadn r6, #40
+			mul r2, r2, r6
+			add r1, r1, r2			; pos do helicoptero em questao em r1
+
+			loadn r4, #CorpoHelicotero
+			loadn r5, #4 				; tamanho do corpo do helicoptero
+			ChecaColisaoTodosTiros_Loop_Helicopteros_Loop:
+				push r1
+
+				loadi r6, r4
+				add r1, r1, r6
+				cmp r0, r1
+				jeq ChecaColisaoTodosTiros_Loop_Helicopteros_Matou
+
+				pop r1
+				inc r4
+				dec r5
+				jnz ChecaColisaoTodosTiros_Loop_Helicopteros_Loop
+			
+			jmp ChecaColisaoTodosTiros_Loop_Helicopteros_Fim	; chegou aqui então terminou o loop sem matar
+			
+			ChecaColisaoTodosTiros_Loop_Helicopteros_Matou:
+				pop r1	; ficou do loop
+				pop r2	; recupera o endereco do Y do helicoptero que morreu
+				pop r1
+
+				loadn r6, #2000	; flag morto
+				storei r2, r6	; mata o helicoptero
+
+				; se o tiro já matou o helicoptero, precisamos matar ele tambem
+				jmp ChecaColisaoTodosTiros_Loop_MatarTiro
+
+				inc r1
+				inc r2
+				dec r3
+				jnz ChecaColisaoTodosTiros_Loop_Helicopteros 
+
+			ChecaColisaoTodosTiros_Loop_Helicopteros_Fim:
+				pop r2
+				pop r1
+
+				inc r1
+				inc r2
+				dec r3
+				jnz ChecaColisaoTodosTiros_Loop_Helicopteros 
+
+		jmp ChecaColisaoTodosTiros_Loop_Fim		; se chegou até aqui o tiro não matou ninguem
+
+		ChecaColisaoTodosTiros_Loop_MatarTiro:
+			pop r2	; restaura registradores
+			pop r1
+			pop r0
+			
+			loadn r6, #2000	; flag de morto
+			storei r1, r6	; mata o tiro
+
+			inc r0
+			inc r1
+			dec r2
+			jnz ChecaColisaoTodosTiros_Loop
+
+		ChecaColisaoTodosTiros_Loop_Fim:
+			pop r2		; restaura o valor dos registradores
+			pop r1
+			pop r0
+
+			inc r0
+			inc r1
+			dec r2
+			jnz ChecaColisaoTodosTiros_Loop
+
+
+	pop r6
+	pop r5
+	pop r4
+	pop r3
+	pop r2
+	pop r1
+	pop r0
+	rts
 
 ; ======================
 ;  Funções Helicopteros
