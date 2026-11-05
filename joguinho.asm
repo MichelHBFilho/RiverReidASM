@@ -5,6 +5,7 @@ jmp main
 ; ======================
 	combustivelTexto: string "FUEL:"
 	gameOverTexto: string "GAMEOVER"
+	reiniciarTexto: string "APERTE R PARA REINICIAR"
 ; ======================
 ;     Variaveis Nave
 ; ======================
@@ -52,14 +53,42 @@ jmp main
 
 contadorFrames: var #1						; Conta frames para operar
 
+RAND: var #30
+	static RAND + #0, #79
+	static RAND + #1, #62
+	static RAND + #2, #90
+	static RAND + #3, #23
+	static RAND + #4, #33
+	static RAND + #5, #9
+	static RAND + #6, #40
+	static RAND + #7, #57
+	static RAND + #8, #39
+	static RAND + #9, #39
+	static RAND + #10, #17
+	static RAND + #11, #76
+	static RAND + #12, #90
+	static RAND + #13, #47
+	static RAND + #14, #71
+	static RAND + #15, #7
+	static RAND + #16, #47
+	static RAND + #17, #30
+	static RAND + #18, #35
+	static RAND + #19, #92
+	static RAND + #20, #2
+	static RAND + #21, #45
+	static RAND + #22, #4
+	static RAND + #23, #67
+	static RAND + #24, #21
+	static RAND + #25, #24
+	static RAND + #26, #71
+	static RAND + #27, #32
+	static RAND + #28, #69
+	static RAND + #29, #76
+ContadorAleatorio: var #1
+
 main:
 	call ApagaTela
     call ResetaVariaveis
-
-	loadn r0, #10
-	loadn r1, #8
-	store posHelicopterosX, r0
-	store posHelicopterosY, r1
 
 	mainLoop:
 		call Desenha
@@ -70,9 +99,31 @@ main:
 		call MovimentaTodosHelicopteros
 		call MovimentaTodosObjetoCombustivel
 		call IncrementaContadorFrames
+		call GeraHelicopteroAleatoriamente
 		jmp mainLoop
 
     halt
+
+; retorna no r7 um número aleatorio
+PegaNumeroAleatorio:
+	push r0
+	push r1
+
+	load r0, ContadorAleatorio
+	loadn r1, #RAND
+	add r1, r0, r1
+
+	loadi r7, r1
+
+	inc r0			; r0 = (contadorAleatorio + 1) % 30
+	loadn r1, #30	; garante que não vai dar acesso indevido
+	mod r0, r0, r1
+
+	store ContadorAleatorio, r0
+
+	pop r1
+	pop r0
+	rts
 
 ResetaVariaveis:
 	loadn r0, #20 				; Nasce no centro da tela
@@ -109,6 +160,10 @@ ResetaVariaveis:
 		dec r2
 		jnz ResetaVariaveis_MataTiros
 
+	loadn r0, #0
+	store ContadorAleatorio, r0
+	store contadorFrames, r0
+
 	rts
 
 IncrementaContadorFrames:
@@ -133,8 +188,15 @@ GameOver:
 	loadn r0, #32767 			; Nao da para fazer loadn sp, #32767
 	mov sp, r0					; Pois não tem caminho
 
+	call ApagaTela				; apaga toda tela
+
 	loadn r0, #616
 	loadn r1, #gameOverTexto
+	loadn r2, #0
+	call ImprimeStr
+
+	loadn r0, #648
+	loadn r1, #reiniciarTexto
 	loadn r2, #0
 	call ImprimeStr
 	
@@ -606,6 +668,10 @@ ChecaColisaoTodosObjetoCombustivel:
 		pop r0
 		rts
 
+; ==================
+; 	FUNÇÕES ATIRAR
+; ================== 
+
 Atirar:
 	push r0
 	push r1
@@ -911,6 +977,55 @@ ChecaColisaoTodosTiros:
 ;  Funções Helicopteros
 ; ======================
 
+GeraHelicopteroAleatoriamente:
+	push r0
+	push r1
+	push r2
+	push r3
+	push r4
+	push r5
+	push r6
+
+	loadn r0, #posHelicopterosX
+	loadn r1, #posHelicopterosY
+	loadn r2, #5				; quantidade de helicopteros
+	loadn r3, #2000				; flag morto
+	GeraHelicopteroAleatoriamente_BuscaPosicaoLivre:
+		loadi r4, r1
+		cmp r4, r3
+		jeq GeraHelicopteroAleatoriamente_CriaHelicoptero
+
+		inc r0
+		inc r1
+		dec r2
+		jnz GeraHelicopteroAleatoriamente_BuscaPosicaoLivre
+
+	; chegou aqui, ou seja, não tem posicao livre!
+	jmp GeraHelicopteroAleatoriamente_Fim
+
+	GeraHelicopteroAleatoriamente_CriaHelicoptero:
+		; r0 -> end do x da primeira posicao livre
+		; r1 -> end do y da primeira posicao livre
+		call PegaNumeroAleatorio			; numero aleatorio em r7
+		loadn r2, #35						; posicao do x 2 < x < 38
+		mod r2, r7, r2						; r2 = r7 % 40
+		loadn r3, #3
+		add r2, r2, r3
+		loadn r3, #0
+
+		storei r0, r2
+		storei r1, r3						; todo helicoptero começa em 0
+		
+	GeraHelicopteroAleatoriamente_Fim:
+		pop r6
+		pop r5
+		pop r4
+		pop r3
+		pop r2
+		pop r1
+		pop r0
+		rts
+
 DesenhaTodosHelicopteros:
 	push r0
 	push r1
@@ -963,6 +1078,8 @@ DesenhaTodosHelicopteros:
 		loadn r2, #CorpoHelicotero
 
 		DesenhaTodosHelicopteros_Loop_Fim:
+			inc r0
+			inc r1
 			dec r7
 			jnz DesenhaTodosHelicopteros_Loop	; quando zerar r7 acabou
 
@@ -1170,6 +1287,8 @@ ApagaTodosHelicopteros:
 		loadn r2, #CorpoHelicotero
 
 		ApagaTodosHelicopteros_Loop_Fim:
+			inc r0
+			inc r1
 			dec r7
 			jnz ApagaTodosHelicopteros_Loop	; quando zerar r7 acabou
 
