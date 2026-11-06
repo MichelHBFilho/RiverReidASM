@@ -94,12 +94,10 @@ main:
 		call Desenha
 		call ConsomeCombustivel
 		call Delay
-		call MovimentaNave
-		call MovimentaTodosTiros
-		call MovimentaTodosHelicopteros
-		call MovimentaTodosObjetoCombustivel
+		call Movimenta
 		call IncrementaContadorFrames
 		call GeraHelicopteroAleatoriamente
+		call GeraObjetoCombustivelAleatoriamente
 		jmp mainLoop
 
     halt
@@ -205,7 +203,7 @@ GameOver:
 		inchar r1
 		cmp r0, r1
 		jeq main
-		jne GameOver_Loop
+		jmp GameOver_Loop
 
 	; Não passa por aqui!
 
@@ -253,6 +251,36 @@ Apaga:
 	pop r1
 	pop r0
 	rts
+
+Movimenta:
+	push r0	
+	push r1
+	push r2
+	push r3
+	push r4
+	push r5
+	push r6
+
+	call MovimentaNave
+	call MovimentaTodosTiros
+
+	loadn r0, #50 			; os demais objetos se movimentam a cada 50 ciclos
+	load r1, contadorFrames
+	mod r0, r1, r0
+	jnz MovimentaFim
+
+	call MovimentaTodosHelicopteros
+	call MovimentaTodosObjetoCombustivel
+
+	Movimenta_Fim:
+		pop r6
+		pop r5
+		pop r4
+		pop r3
+		pop r2
+		pop r1
+		pop r0
+		rts
 
 
 ; ======================
@@ -482,6 +510,55 @@ DesenhaCombustivel:
 	pop r0
 	rts
 
+GeraObjetoCombustivelAleatoriamente:
+	push r0
+	push r1
+	push r2
+	push r3
+	push r4
+	push r5
+	push r6
+
+	loadn r0, #posCombustiveisX
+	loadn r1, #posCombustiveisY
+	loadn r2, #5 				; quantidade objetos combustivel
+	loadn r3, #2000				; flag morto
+	GeraObjetoCombustivelAleatoriamente_BuscaEspacoLivre:
+		loadi r4, r1
+		cmp r4, r3
+		jeq GeraObjetoCombustivelAleatoriamente_CriaObjeto
+		
+		inc r0
+		inc r1
+		dec r2
+		jnz GeraObjetoCombustivelAleatoriamente_BuscaEspacoLivre
+
+	; chegou ate aqui nao teve posicao livre
+	jmp GeraObjetoCombustivelAleatoriamente_Fim
+
+	GeraObjetoCombustivelAleatoriamente_CriaObjeto:
+		; r0 end x do obj livre
+		; r1 end y do obj livre
+		call PegaNumeroAleatorio		; gera um numero aleatorio em r7
+		loadn r2, #36					; 2 < x < 38
+		mod r2, r7, r2
+		loadn r3, #2
+		add r2, r2, r3
+
+		storei r0, r2
+		loadn r3, #0 					; nasce sempre no 0
+		storei r1, r3
+	
+	GeraObjetoCombustivelAleatoriamente_Fim:
+		pop r6
+		pop r5
+		pop r4
+		pop r3
+		pop r2
+		pop r1
+		pop r0
+		rts
+
 DesenhaTodosObjetoCombustivel:
 	push r0
 	push r1
@@ -542,11 +619,6 @@ MovimentaTodosObjetoCombustivel:
 	loadn r1, #posCombustiveisY
 	loadn r2, #3
 	loadn r6, #' '
-
-	load r3, contadorFrames
-	loadn r4, #100
-	mod r3, r3, r4
-	jnz MovimentaTodosObjetoCombustivel_Fim
 
 	MovimentaTodosObjetoCombustivel_Loop:
 		loadi r3, r0
@@ -1100,11 +1172,6 @@ MovimentaTodosHelicopteros:
 	push r4
 	push r5
 	push r6
-
-	load r0, contadorFrames
-	loadn r1, #100
-	mod r0, r0, r1
-	jnz MovimentaTodosHelicopteros_Fim
 
 	call ApagaTodosHelicopteros			; helicoptero vai mover, então apago ele
 
