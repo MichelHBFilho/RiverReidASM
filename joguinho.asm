@@ -96,8 +96,7 @@ main:
 		call Delay
 		call Movimenta
 		call IncrementaContadorFrames
-		call GeraHelicopteroAleatoriamente
-		call GeraObjetoCombustivelAleatoriamente
+		call GeraObjetosAleatoriamente
 		jmp mainLoop
 
     halt
@@ -282,6 +281,31 @@ Movimenta:
 		pop r0
 		rts
 
+GeraObjetosAleatoriamente:
+	push r0	
+	push r1
+	push r2
+	push r3
+	push r4
+	push r5
+	push r6
+
+	load r0, contadorFrames
+	loadn r1, #100
+	mod r2, r0, r1
+	cz GeraObjetoCombustivelAleatoriamente
+	loadn r1, #150
+	mod r2, r0, r1
+	cz GeraHelicopteroAleatoriamente
+
+	pop r6
+	pop r5
+	pop r4
+	pop r3
+	pop r2
+	pop r1
+	pop r0
+	rts
 
 ; ======================
 ; 	   Funções Nave
@@ -521,7 +545,7 @@ GeraObjetoCombustivelAleatoriamente:
 
 	loadn r0, #posCombustiveisX
 	loadn r1, #posCombustiveisY
-	loadn r2, #5 				; quantidade objetos combustivel
+	loadn r2, #3 				; quantidade objetos combustivel
 	loadn r3, #2000				; flag morto
 	GeraObjetoCombustivelAleatoriamente_BuscaEspacoLivre:
 		loadi r4, r1
@@ -725,10 +749,15 @@ ChecaColisaoTodosObjetoCombustivel:
 		storei r2, r0
 
 		load r0, combustivelNave
-		loadn r1, #5 			 ; soma 5 no combustivel da nave
+		loadn r1, #5 			; soma 5 no combustivel da nave
 		add r0, r0, r1
-		store combustivelNave, r0
-		call DesenhaCombustivel
+		loadn r1, #30
+		cmp r0, r1				; if(r0 > 30) r0 = 30
+		jle ChecaColisaoTodosObjetoCombustivel_Bateu_Salva
+		mov r0, r1
+		ChecaColisaoTodosObjetoCombustivel_Bateu_Salva:
+			store combustivelNave, r0
+			call DesenhaCombustivel
 
 	ChecaColisaoTodosObjetoCombustivel_Fim:
 		pop r6
