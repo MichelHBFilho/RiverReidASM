@@ -18,8 +18,7 @@ jmp main
 		static CorpoNave + #4, #80	; Bunda 		[4] = 80
 	CorpoNaveCaracteres: string "rtzmu"
 
-	posNaveX: var #1
-	posNaveY: var #1
+    posNave: var #1
 
 	combustivelNave: var #1 		; 0-30
 
@@ -28,28 +27,27 @@ jmp main
 		static CombustivelObjetoCaracter + #0, #'F'
 	CorpoCombustivelObjeto: var #1
 		static CorpoCombustivelObjeto + #0, #0
-	posCombustiveisX: var #3
-	posCombustiveisY: var #3
-		
+
+	posCombustiveis: var #3
+
 	; 3 tiros ao mesmo tempo na tela parece razoavel
-	posTirosX: var #3
-	posTirosY: var #3
+	posTiros: var #3
+
 	CorpoTiroCaracter: string "A"
 ; ======================
 ; Variaveis Helicopteros
 ; ======================
 	; Posicoes do corpo com relacao ao parte superior esquerda do helicoptero
-	CorpoHelicotero: var #4
-		static CorpoHelicotero + #0, #0		; Sup Esquerda	[0] = 0
-		static CorpoHelicotero + #1, #1		; Sup Direita	[1] = 39
-		static CorpoHelicotero + #2, #41	; Inf Direita	[2] = 40
-		static CorpoHelicotero + #3, #40	; Inf Esquerda 	[3] = 41
-	CorpoHelicopteroCaracters: string "nold" 
-	
+	CorpoHelicoptero: var #4
+		static CorpoHelicoptero + #0, #0		; Sup Esquerda	[0] = 0
+		static CorpoHelicoptero + #1, #1		; Sup Direita	[1] = 39
+		static CorpoHelicoptero + #2, #41	; Inf Direita	[2] = 40
+		static CorpoHelicoptero + #3, #40	; Inf Esquerda 	[3] = 41
+	CorpoHelicopteroCaracters: string "nold"
+
 	; Guarda a posição de  5 helicopteros
 	; 2000 -> Objeto Morto
-	posHelicopterosX: var #5 
-	posHelicopterosY: var #5
+	posHelicopteros: var #5
 
 contadorFrames: var #1						; Conta frames para operar
 
@@ -123,15 +121,14 @@ PegaNumeroAleatorio:
 	rts
 
 ResetaVariaveis:
-	loadn r0, #20 				; Nasce no centro da tela
-    loadn r1, #25 				; Y sempre fica em 27
-	loadn r2, #30 				; comeca com o maximo de combustivel
-    store posNaveX, r0
-    store posNaveY, r1
-	store combustivelNave, r2	
+    loadn r0, #1020             ; linha 25, coluna 20
+    store posNave, r0
+
+    loadn r0, #30
+	store combustivelNave, r0
 
 	loadn r0, #2000
-	loadn r1, #posCombustiveisY
+	loadn r1, #posCombustiveis
 	loadn r2, #3				; quantidade de combustiveis
 	ResetaVariaveis_MataCombustivel:
 		storei r1, r0
@@ -140,7 +137,7 @@ ResetaVariaveis:
 		jnz ResetaVariaveis_MataCombustivel
 
 	loadn r0, #2000
-	loadn r1, #posHelicopterosY
+	loadn r1, #posHelicopteros
 	loadn r2, #5				; quantidade de helicopteros
 	ResetaVariaveis_MataHelicoptero:
 		storei r1, r0
@@ -149,7 +146,7 @@ ResetaVariaveis:
 		jnz ResetaVariaveis_MataHelicoptero
 
 	loadn r0, #2000
-	loadn r1, #posTirosY
+	loadn r1, #posTiros
 	loadn r2, #3				; quantidade de tiros
 	ResetaVariaveis_MataTiros:
 		storei r1, r0
@@ -196,7 +193,7 @@ GameOver:
 	loadn r1, #reiniciarTexto
 	loadn r2, #0
 	call ImprimeStr
-	
+
 	loadn r0, #'r'
 	GameOver_Loop: 				; while(inchar != 'r')
 		inchar r1
@@ -252,7 +249,7 @@ Apaga:
 	rts
 
 Movimenta:
-	push r0	
+	push r0
 	push r1
 	push r2
 	push r3
@@ -282,7 +279,7 @@ Movimenta:
 		rts
 
 GeraObjetosAleatoriamente:
-	push r0	
+	push r0
 	push r1
 	push r2
 	push r3
@@ -319,31 +316,25 @@ DesenharNave:
 	push r5
 	push r6
 
-    load r0, posNaveX
-    load r1, posNaveY
-
-    ; calcula posicao absoluta
-    loadn r6, #40
-    mul r1, r1, r6
-    add r0, r0, r1 ; r0 = posX + 40 * posY
+    load r0, posNave
 
     ; carrega o vetor corpo nave
     loadn r1, #CorpoNave
     loadn r2, #CorpoNaveCaracteres
-    
+
     loadn r6, #5
 
     DesenharNaveLoop:		; for(int i = 0; i < 5; i++)
         mov r3, r0 			; colocar posicao absoluta em r3
         loadi r4, r1 		; r4 = corponave[]-> diferenca relativa
 
-        add r3, r3, r4 		; r3 = posicao relativa + corponave[] 
+        add r3, r3, r4 		; r3 = posicao relativa + corponave[]
         loadi r5, r2 		; r5 = caracter para imprimir
         outchar r5, r3 		; imprime
 
         inc r1
         inc r2
-        
+
         dec r6
         jnz DesenharNaveLoop
 
@@ -365,18 +356,12 @@ ApagaNave:
 	push r5
 	push r6
 
-    load r0, posNaveX
-    load r1, posNaveY
-
-    ; calcula posicao absoluta
-    loadn r6, #40
-    mul r1, r1, r6
-    add r0, r0, r1 ; r0 = posX + 40 * posY
+    load r0, posNave
 
     ; carrega o vetor corpo nave
     loadn r1, #CorpoNave
-	
-	; TODO - preencher com o fundo 
+
+	; TODO - preencher com o fundo
     loadn r5, #' '			; Preenche com espaço branco!
 
     loadn r6, #5
@@ -425,26 +410,26 @@ MovimentaNave:
 	MovimentaEsquerda:
 		call ApagaNave		; apago a nave se mexer
 
-		load r0, posNaveX
-		loadn r1, #1		; Limite a esquerda
+		load r0, posNave
+		loadn r1, #1001		; Limite a esquerda
 
 		dec r0 				; Movimenta para esquerda
 		cmp r0, r1 			; if(posX < 1) return
 		jle MovimentaFim
-		store posNaveX, r0
+		store posNave, r0
 
 		jmp MovimentaFim
 
 	MovimentaDireita:
 		call ApagaNave
 
-		load r0, posNaveX
-		loadn r1, #38		; Limite a direita
+		load r0, posNave
+		loadn r1, #1038		; Limite a direita
 
 		inc r0 				; Movimenta para direita
 		cmp r0, r1 			; if(posX > 39) return
 		jgr MovimentaFim
-		store posNaveX, r0
+		store posNave, r0
 		jmp MovimentaFim
 
 	MovimentaFim:
@@ -490,6 +475,39 @@ ConsomeCombustivel:
 		pop r0
 		rts
 
+AumentarCombustivel:
+    push r0
+	push r1
+	push r2
+	push r3
+	push r4
+	push r5
+	push r6
+
+	load r0, combustivelNave
+	loadn r1, #5
+	add r0, r0, r1
+
+    loadn r1, #30
+    cmp r0, r1
+    jel AumentarCombustivel_Salva
+
+    mov r0, r1
+
+	AumentarCombustivel_Salva:
+	    store combustivelNave, r0
+
+	call DesenhaCombustivel
+
+    pop r6
+	pop r5
+	pop r4
+	pop r3
+	pop r2
+	pop r1
+	pop r0
+	rts
+
 ; apaga e redesenha!
 DesenhaCombustivel:
 	push r0
@@ -516,7 +534,7 @@ DesenhaCombustivel:
 		inc r0
 		dec r1					; if(r1 != 0) goto Loop
 		jnz DesenhaCombustivel_Loop
-	
+
 	; depois do LOOP1 o r0 aponta para a primeira posicao que não tem combustivel
 
 	DesenhaCombustivel_Loop2: 	; apaga onde não tem mais combustivel
@@ -543,26 +561,24 @@ GeraObjetoCombustivelAleatoriamente:
 	push r5
 	push r6
 
-	loadn r0, #posCombustiveisX
-	loadn r1, #posCombustiveisY
-	loadn r2, #3 				; quantidade objetos combustivel
-	loadn r3, #2000				; flag morto
+	loadn r0, #posCombustiveis
+	loadn r1, #3 				; quantidade objetos combustivel
+	loadn r2, #2000				; flag morto
 	GeraObjetoCombustivelAleatoriamente_BuscaEspacoLivre:
-		loadi r4, r1
-		cmp r4, r3
+		loadi r3, r0
+		cmp r3, r2
 		jeq GeraObjetoCombustivelAleatoriamente_CriaObjeto
-		
+
 		inc r0
-		inc r1
-		dec r2
+		dec r1
 		jnz GeraObjetoCombustivelAleatoriamente_BuscaEspacoLivre
 
 	; chegou ate aqui nao teve posicao livre
 	jmp GeraObjetoCombustivelAleatoriamente_Fim
 
 	GeraObjetoCombustivelAleatoriamente_CriaObjeto:
-		; r0 end x do obj livre
-		; r1 end y do obj livre
+		; r0 end do obj livre
+
 		call PegaNumeroAleatorio		; gera um numero aleatorio em r7
 		loadn r2, #15					; 13 < x < 28
 		mod r2, r7, r2
@@ -570,9 +586,7 @@ GeraObjetoCombustivelAleatoriamente:
 		add r2, r2, r3
 
 		storei r0, r2
-		loadn r3, #0 					; nasce sempre no 0
-		storei r1, r3
-	
+
 	GeraObjetoCombustivelAleatoriamente_Fim:
 		pop r6
 		pop r5
@@ -592,32 +606,24 @@ DesenhaTodosObjetoCombustivel:
 	push r5
 	push r6
 
-	loadn r0, #posCombustiveisX
-	loadn r1, #posCombustiveisY
-	loadn r2, #3
-	load r6, CombustivelObjetoCaracter
+	loadn r0, #posCombustiveis
+	loadn r1, #3
+	load r2, CombustivelObjetoCaracter
 
 	DesenhaObjetoCombustivel_Loop:
 		loadi r3, r0
-		loadi r4, r1
 
 		; Checa se o combustivel está morto
 		; se estiver morto não tem que desenahr
 		loadn r5, #2000
-		cmp r4, r5
+		cmp r3, r5
 		jeq DesenhaObjetoCombustivel_Loop_Fim
 
-		; calcula posição absoluta
-		loadn r5, #40
-		mul r4, r4, r5
-		add r3, r3, r4
-
-		outchar r6, r3
+		outchar r2, r3
 
 		DesenhaObjetoCombustivel_Loop_Fim:
 			inc r0
-			inc r1
-			dec r2
+			dec r1
 			jnz DesenhaObjetoCombustivel_Loop
 
 	pop r6
@@ -638,33 +644,25 @@ ApagaTodosObjetoCombustivel:
 	push r5
 	push r6
 
-	loadn r0, #posCombustiveisX
-	loadn r1, #posCombustiveisY
-	loadn r2, #3
-	loadn r6, #' '
+	loadn r0, #posCombustiveis
+	loadn r1, #3
+	loadn r2, #' '
 
 	ApagaTodosObjetoCombustivel_Loop:
 		loadi r3, r0
-		loadi r4, r1
 
 		; checa se ja morreu
-		loadn r5, #2000
-		cmp r4, r5
+		loadn r4, #2000
+		cmp r3, r4
 		jeq ApagaTodosObjetoCombustivel_Loop_Fim
 
-		loadn r5, #40
-
-		mul r4, r4, r5
-		add r3, r3, r4
-		outchar r6, r3					; Apaga o combustivel
+		outchar r2, r3					; Apaga o combustivel
 
 		ApagaTodosObjetoCombustivel_Loop_Fim:
 			inc r0
-			inc r1
-			dec r2
+			dec r1
 			jnz ApagaTodosObjetoCombustivel_Loop
 
-	
 	pop r6
 	pop r5
 	pop r4
@@ -685,38 +683,30 @@ MovimentaTodosObjetoCombustivel:
 
 	call ApagaTodosObjetoCombustivel
 
-	loadn r0, #posCombustiveisX
-	loadn r1, #posCombustiveisY
+	loadn r0, #posCombustiveis
 	loadn r2, #3
 
 	MovimentaTodosObjetoCombustivel_Loop:
 		loadi r3, r0
-		loadi r4, r1
 
 		; checa se morreu
-		loadn r5, #2000
-		cmp r4, r5
+		loadn r4, #2000
+		cmp r3, r4
 		jeq MovimentaTodosObjetoCombustivel_Loop_Fim
 
-		loadn r5, #40
-
-		mul r4, r4, r5
+		loadn r4, #40
 		add r3, r3, r4
 
-		; Atualizo o y do combustivel e storo
-		loadi r4, r1
-		inc r4
+		loadn r5, #1120          ; limite (não invadir a barra de fuel)
+		cmp r3, r5
+		jle MovimentaTodosObjetoCombustivel_Loop_Salva
 
-		loadn r5, #28 					; Se passou disso sem tocar aviao some
-		cmp r4, r5
-		jne MovimentaTodosObjetoCombustivel_Loop_Salva
-		loadn r4, #2000
+		loadn r3, #2000
 
 		MovimentaTodosObjetoCombustivel_Loop_Salva:
-			storei r1, r4
+			storei r0, r3
 		MovimentaTodosObjetoCombustivel_Loop_Fim:
 			inc r0
-			inc r1
 			dec r2
 			jnz MovimentaTodosObjetoCombustivel_Loop
 
@@ -741,81 +731,53 @@ ChecaColisaoTodosObjetoCombustivel:
 	push r5
 	push r6
 
-	load r0, posNaveX
-	load r1, posNaveY
-	loadn r2, #40
-	mul r1, r1, r2
-	add r0, r0, r1			; pos nave em r0
-
-	loadn r6, #3 ; quantidade de objetos combustivel
-	loadn r1, #posCombustiveisX
-	loadn r2, #posCombustiveisY
-	; pos absoluta combustivel em r3
-
+	loadn r0, #posCombustiveis
+	loadn r1, #3                ; quantidade de objetos combustivel
 	ChecaColisaoTodosObjetoCombustivel_Loop:
-		loadi r3, r1
-		loadi r4, r2
+	    loadi r2, r0
 
-		loadn r5, #2000		; verifica se esta morto
-		cmp r4, r5
+		loadn r3, #2000
+		cmp r2, r3
 		jeq ChecaColisaoTodosObjetoCombustivel_Loop_Fim
-	
-		loadn r5, #40
-		mul r4, r4, r5
-		add r3, r3, r4			; pos aboluta do combustivel em questao em r3
 
-		loadn r4, #CorpoNave
-		loadn r5, #5 			; tamanho corpo nave
-		ChecaColisaoTodosObjetoCombustivel_Loop2:
-			push r0
+        load r3, posNave
+	    loadn r4, #CorpoNave
+	    loadn r5, #5            ; tamanho corpo nave
+		ChecaColisaoTodosObjetoCombustivel_Loop_2:
+		    loadi r6, r4
+			add r6, r6, r3
+			cmp r2, r6
 
-			loadi r7, r4
-			add r0, r0, r7
-			cmp r0, r3
-			jeq ChecaColisaoTodosObjetoCombustivel_Bateu
+			jne ChecaColisaoTodosObjetoCombustivel_Loop_2_Fim
 
-			pop r0
-			inc r4
-			dec r5
-			jnz ChecaColisaoTodosObjetoCombustivel_Loop2
+            ceq AumentarCombustivel
+            ceq MataObjetoCombustivel
+            jmp ChecaColisaoTodosObjetoCombustivel_Fim
+
+            ChecaColisaoTodosObjetoCombustivel_Loop_2_Fim:
+                inc r4
+                dec r5
+                jnz ChecaColisaoTodosObjetoCombustivel_Loop_2
 
 		ChecaColisaoTodosObjetoCombustivel_Loop_Fim:
-			inc r1
-			inc r2
-			dec r6
+		    inc r0
+		    dec r1
 			jnz ChecaColisaoTodosObjetoCombustivel_Loop
 
-	jmp ChecaColisaoTodosObjetoCombustivel_Fim
-	
-	ChecaColisaoTodosObjetoCombustivel_Bateu:
-		pop r0 	; se não vai dar problema!
-		loadn r0, #2000		; mata o combustivel em questão
-		storei r2, r0
+    ChecaColisaoTodosObjetoCombustivel_Fim:
+        pop r6
+    	pop r5
+    	pop r4
+    	pop r3
+    	pop r2
+    	pop r1
+    	pop r0
+    	rts
 
-		load r0, combustivelNave
-		loadn r1, #5 			; soma 5 no combustivel da nave
-		add r0, r0, r1
-		loadn r1, #30
-		cmp r0, r1				; if(r0 > 30) r0 = 30
-		jle ChecaColisaoTodosObjetoCombustivel_Bateu_Salva
-		mov r0, r1
-		ChecaColisaoTodosObjetoCombustivel_Bateu_Salva:
-			store combustivelNave, r0
-			call DesenhaCombustivel
-
-	ChecaColisaoTodosObjetoCombustivel_Fim:
-		pop r6
-		pop r5
-		pop r4
-		pop r3
-		pop r2
-		pop r1
-		pop r0
-		rts
 
 ; ==================
 ; 	FUNÇÕES ATIRAR
-; ================== 
+; ==================
 
 Atirar:
 	push r0
@@ -826,40 +788,37 @@ Atirar:
 	push r5
 	push r6
 
-	load r0, posNaveX		; o tiro nasce uma linha acima da nave
-	load r1, posNaveY
-	dec r1					; sobe uma linha
+	load r0, posNave		; o tiro nasce uma linha acima da nave
+	loadn r1, #40
+	sub r0, r0, r1
 
 	loadn r2, #2000	   ; flag de morto
 	loadn r3, #3			; quantidade de tiros
-	loadn r4, #posTirosX
-	loadn r5, #posTirosY
+	loadn r4, #posTiros
+
 	Atirar_ProcuraPosicaoLivre:
-		loadi r6, r5
-		cmp r6, r2
+		loadi r5, r4
+		cmp r5, r2
 		jeq Atirar_Salvar
 
 		inc r4
-		inc r5
 		dec r3
 		jnz Atirar_ProcuraPosicaoLivre
 
-	; chegou aqui não encontrou espaço livre mata o mais antigo, que é o 0
-	loadn r4, #posTirosX
-	loadn r5, #posTirosY
+    jmp Atirar_Fim          ; chegou aqui porque não tem espaço livre
 
-	Atirar_Salvar:			; quando chegar aqui o r4 e r5 vao guardar o endereco 
+	Atirar_Salvar:			; quando chegar aqui o r4 tem o endereço do tiro livre
 		storei r4, r0
-		storei r5, r1
 
-	pop r6
-	pop r5
-	pop r4
-	pop r3
-	pop r2
-	pop r1
-	pop r0
-	rts
+    Atirar_Fim:
+    	pop r6
+    	pop r5
+    	pop r4
+    	pop r3
+    	pop r2
+    	pop r1
+    	pop r0
+    	rts
 
 DesenhaTodosTiros:
 	push r0
@@ -870,26 +829,19 @@ DesenhaTodosTiros:
 	push r5
 	push r6
 
-	loadn r0, #posTirosX
-	loadn r1, #posTirosY
+	loadn r0, #posTiros
 	load r2, CorpoTiroCaracter
 	loadn r3, #3				; quantidade de tiros
 	DesenhaTodosTiros_Loop:
-		loadi r4, r1 ; y primeiro checa morte
+		loadi r4, r0
 		loadn r5, #2000 ; flag morto
 		cmp r4, r5
 		jeq DesenhaTodosTiros_Loop_Fim
-
-		loadn r5, #40
-		mul r4, r4, r5
-		loadi r5, r0
-		add r4, r4, r5 			; pos absoluta em r4
 
 		outchar r2, r4
 
 		DesenhaTodosTiros_Loop_Fim:
 			inc r0
-			inc r1
 			dec r3
 			jnz DesenhaTodosTiros_Loop
 
@@ -912,26 +864,21 @@ ApagaTodosTiros:
 	push r5
 	push r6
 
-	loadn r0, #posTirosX
-	loadn r1, #posTirosY
+	loadn r0, #posTiros
+
 	loadn r2, #' '
 	loadn r3, #3				; quantidade de tiros
+
 	ApagaTodosTiros_Loop:
-		loadi r4, r1 ; y primeiro checa morte
+		loadi r4, r0
 		loadn r5, #2000 ; flag morto
 		cmp r4, r5
 		jeq ApagaTodosTiros_Loop_Fim
-
-		loadn r5, #40
-		mul r4, r4, r5
-		loadi r5, r0
-		add r4, r4, r5 			; pos absoluta em r4
 
 		outchar r2, r4
 
 		ApagaTodosTiros_Loop_Fim:
 			inc r0
-			inc r1
 			dec r3
 			jnz ApagaTodosTiros_Loop
 
@@ -956,19 +903,28 @@ MovimentaTodosTiros:
 
 	call ApagaTodosTiros
 
-	loadn r0, #posTirosY
+	loadn r0, #posTiros
 	loadn r1, #2000		; flag de morto
-	loadn r2, #3			 ; quantidae de tiros
+	loadn r2, #3			 ; quantidade de tiros
 
 	MovimentaTodosTiros_Loop:
 		loadi r3, r0
 		cmp r3, r1
 		jeq MovimentaTodosTiros_Loop_Fim
 
-		dec r3
-		jz MovimentaTodosTiros_Matar
-		jmp MovimentaTodosTiros_Salvar
-		
+		loadn r4, #40
+		sub r3, r3, r4          ; sobe uma linha
+
+	    ; COMENTÁRIO
+	    ; Não sei se é o comportamento esperado, porém
+		; no simulador que eu uso, a CPU do ICMC quando
+		; da negativo fica igual a zero, por isso estou
+		; comparando com 0 aqui em baixo :P
+    
+        loadn r4, #0
+        cmp r3, r4
+		jne MovimentaTodosTiros_Salvar
+
 		MovimentaTodosTiros_Matar:
 			mov r3, r1
 		MovimentaTodosTiros_Salvar:
@@ -991,170 +947,166 @@ MovimentaTodosTiros:
 		rts
 
 ChecaColisaoTodosTiros:
-	push r0
+    push r0
 	push r1
 	push r2
 	push r3
 	push r4
 	push r5
-	push r6	
+	push r6
 
-	loadn r0, #posTirosX
-	loadn r1, #posTirosY
-	loadn r2, #3		; quantidade de tiros
+	loadn r0, #posTiros
+	loadn r1, #3
 
 	ChecaColisaoTodosTiros_Loop:
-		push r0			; preciso de mais registradores, salvo esses valores
-		push r1
-		push r2
+        loadi r2, r0
+        loadn r3, #2000 ; flag morto
+		cmp r2, r3
+		jeq ChecaColisaoTodosTiros_Loop_Fim
 
-		; calcular posicao absoluta do tiro em questao
-		loadi r0, r0
-		loadi r1, r1
+		push r0
+		mov r0, r2  ; r0 guarda a posicao do tiro em questao
+		call ChecaColisaoTiroHelicopteros
+		pop r0
 
-		loadn r2, #2000	; flag de morto
-		cmp r1, r2
-		jeq ChecaColisaoTodosTiros_Loop_Fim	; não testa tiro que não existe
+		; se o retorno da funcao for 1, significa
+		; que algum helicoptero foi morto
+		; sendo assim tem que matar o tiro!
+		loadn r3, #1
+		cmp r7, r3
+		jeq ChecaColisaoTodosTiros_Loop_MatarTiro
 
-		loadn r2, #40
-		mul r1, r1, r2
-		
-		add r0, r0, r1	; pos absoluta do tiro em r0
+		push r0
+		mov r0, r2
+		call ChecaColisaoTiroCombutiveis
+		pop r0
 
-		; essa parte do loop cuida da colisao com helicopteros
-		loadn r1, #posHelicopterosX
-		loadn r2, #posHelicopterosY
-		loadn r3, #5 				; quantidade de helicopteros
-		ChecaColisaoTodosTiros_Loop_Helicopteros:
-			push r1
-			push r2
+		cmp r7, r3
+		jeq ChecaColisaoTodosTiros_Loop_MatarTiro
 
-			loadi r1, r1
-			loadi r2, r2
-			loadn r6, #2000			; flag de morto
-			cmp r2, r6
-			jeq ChecaColisaoTodosTiros_Loop_Helicopteros_Fim
-			loadn r6, #40
-			mul r2, r2, r6
-			add r1, r1, r2			; pos do helicoptero em questao em r1
+		jmp ChecaColisaoTodosTiros_Loop_Fim
 
-			loadn r4, #CorpoHelicotero
-			loadn r5, #4 				; tamanho do corpo do helicoptero
-			ChecaColisaoTodosTiros_Loop_Helicopteros_Loop:
-				push r1
-
-				loadi r6, r4
-				add r1, r1, r6
-				cmp r0, r1
-				jeq ChecaColisaoTodosTiros_Loop_Helicopteros_Matou
-
-				pop r1
-				inc r4
-				dec r5
-				jnz ChecaColisaoTodosTiros_Loop_Helicopteros_Loop
-			
-			jmp ChecaColisaoTodosTiros_Loop_Helicopteros_Fim	; chegou aqui então terminou o loop sem matar
-			
-			ChecaColisaoTodosTiros_Loop_Helicopteros_Matou:
-				pop r1	; ficou do loop
-				pop r2	; recupera o endereco do Y do helicoptero que morreu
-				pop r1
-
-				call ApagaTodosHelicopteros	; apaga todos os helicopteros da tela
-				; somente os vivos serão redesenhados!
-
-				loadn r6, #2000	; flag morto
-				storei r2, r6	; mata o helicoptero
-
-				; se o tiro já matou o helicoptero, precisamos matar ele tambem
-				jmp ChecaColisaoTodosTiros_Loop_MatarTiro
-
-				inc r1
-				inc r2
-				dec r3
-				jnz ChecaColisaoTodosTiros_Loop_Helicopteros 
-
-			ChecaColisaoTodosTiros_Loop_Helicopteros_Fim:
-				pop r2
-				pop r1
-
-				inc r1
-				inc r2
-				dec r3
-				jnz ChecaColisaoTodosTiros_Loop_Helicopteros 
-
-		loadn r1, #posCombustiveisX
-		loadn r2, #posCombustiveisY
-		loadn r3, #3			; quantidade de combustiveis
-		ChecaColisaoTodosTiros_Loop_Combustivel:
-			push r1
-			push r2
-
-			loadi r1, r1
-			loadi r2, r2
-			loadn r4, #2000
-
-			cmp r2, r4
-			jeq ChecaColisaoTodosTiros_Loop_Combustivel_Fim
-
-			loadn r4, #40
-			mul r2, r2, r4
-			add r1, r1, r2
-
-			cmp r0, r1
-			jne ChecaColisaoTodosTiros_Loop_Combustivel_Fim
-
-			; r0 posicao inicial
-			; r1 raio
-			loadn r1, #2
-			call ExplosaoMataObjetos
-
-			pop r2
-			pop r1
-			
-			push r0
-			mov r0, r2
-			call MataObjetoCombustivel
-			pop r0
-
-			jmp ChecaColisaoTodosTiros_Loop_MatarTiro
-
-			ChecaColisaoTodosTiros_Loop_Combustivel_Fim:
-				pop r2
-				pop r1
-
-				inc r1
-				inc r2
-				dec r3
-				jnz ChecaColisaoTodosTiros_Loop_Combustivel
-
-		jmp ChecaColisaoTodosTiros_Loop_Fim		; se chegou até aqui o tiro não matou ninguem
-
-		ChecaColisaoTodosTiros_Loop_MatarTiro:
-			pop r2	; restaura registradores
-			pop r1
-			pop r0
-			
-			loadn r6, #2000	; flag de morto
-			storei r1, r6	; mata o tiro
-
-			inc r0
-			inc r1
-			dec r2
-			jnz ChecaColisaoTodosTiros_Loop
+    ChecaColisaoTodosTiros_Loop_MatarTiro:
+      loadn r2, #2000     ; flag de morto
+      storei r0, r2
 
 		ChecaColisaoTodosTiros_Loop_Fim:
-			pop r2		; restaura o valor dos registradores
-			pop r1
-			pop r0
-
-			inc r0
-			inc r1
-			dec r2
+		  inc r0
+			dec r1
 			jnz ChecaColisaoTodosTiros_Loop
 
+    pop r6
+	pop r5
+	pop r4
+	pop r3
+	pop r2
+	pop r1
+	pop r0
+	rts
+
+
+; r0 posicao do tiro atual
+; r7 retorna se matou algum helicoptero
+ChecaColisaoTiroHelicopteros:
+    push r0
+	push r1
+	push r2
+	push r3
+	push r4
+	push r5
+	push r6
+
+	loadn r7, #0        ; comeca com não
+
+	loadn r1, #posHelicopteros
+	loadn r2, #5        ; quantidade de helicopteros
+
+	ChecaColisaoTiroHelicopteros_Loop:
+	    loadi r3, r1
+		loadn r4, #2000   ; flag morto
+		cmp r3, r4
+		jeq ChecaColisaoTiroHelicopteros_Loop_Fim
+
+        loadn r4, #CorpoHelicoptero
+        loadn r5, #4  ; tamanho corpo
+		ChecaColisaoTiroHelicopteros_Loop_Loop:
+		    loadi r6, r4
+			add r6, r3, r6
+			cmp r0, r6
+
+			jeq ChecaColisaoTiroHelicopteros_Loop_Matou
+
+			inc r4
+			dec r5
+			jnz ChecaColisaoTiroHelicopteros_Loop_Loop
+
+    ; se chegou aqui não atingiu em momento algum!
+    jmp ChecaColisaoTiroHelicopteros_Loop_Fim
+
+	ChecaColisaoTiroHelicopteros_Loop_Matou:
+	    loadn r7, #1
+
+		push r0
+		mov r0, r1
+		call MataHelicoptero
+	    pop r0
+
+	ChecaColisaoTiroHelicopteros_Loop_Fim:
+	    inc r1
+		dec r2
+		jnz ChecaColisaoTiroHelicopteros_Loop
 
 	pop r6
+	pop r5
+	pop r4
+	pop r3
+	pop r2
+	pop r1
+	pop r0
+	rts
+
+; r0 - pos do tiro
+; r7 - retorno se algum morreu
+ChecaColisaoTiroCombutiveis:
+    push r0
+	push r1
+	push r2
+	push r3
+	push r4
+	push r5
+	push r6
+
+    loadn r7, #0
+
+    loadn r1, #posCombustiveis
+	loadn r2, #3          ; quantidade combustiveis
+	ChecaColisaoTiroCombutiveis_Loop:
+	    loadi r3, r1
+		loadn r4, #2000     ; flag morto
+		cmp r3, r4
+		jeq ChecaColisaoTiroCombutiveis_Loop_Fim
+
+        cmp r0, r3
+        jne ChecaColisaoTiroCombutiveis_Loop_Fim
+
+        push r1
+        loadn r1, #2
+        call ExplosaoMataObjetos
+        pop r1
+
+        push r0
+        mov r0, r1
+        call MataObjetoCombustivel
+        pop r0
+
+        loadn r7, #1
+
+    	ChecaColisaoTiroCombutiveis_Loop_Fim:
+    	    inc r1
+    		dec r2
+    		jnz ChecaColisaoTiroCombutiveis_Loop
+
+    pop r6
 	pop r5
 	pop r4
 	pop r3
@@ -1189,22 +1141,16 @@ ExplosaoMataObjetos:
 	push r5
 	push r6
 
-	loadn r2, #posHelicopterosX
-	loadn r3, #posHelicopterosY
-	loadn r4, #5				; quantidade de helicopteros
+	loadn r2, #posHelicopteros
+	loadn r3, #5				; quantidade de helicopteros
 	ExplosaoMataObjetos_Helicopteros:
-		loadi r5, r2
-		loadi r6, r3
+		loadi r4, r2
 
-		loadn r7, #2000
-		cmp r6, r7
+		loadn r5, #2000
+		cmp r4, r5
 		jeq ExplosaoMataObjetos_Helicopteros_Fim
 
-		loadn r7, #40
-		mul r6, r6, r7
-		add r5, r5, r6
-
-		mov r7, r5			; parametro no r7
+		mov r7, r4			; parametro no r7
 		call DentroDoRaio	; retorno no r7
 
 		loadn r5, #1
@@ -1212,19 +1158,15 @@ ExplosaoMataObjetos:
 		jne ExplosaoMataObjetos_Helicopteros_Fim
 
 		ExplosaoMataObjetos_Helicopteros_Matou:
-			call ApagaTodosHelicopteros	; apago todos helicopteros ANTES de matar
-
-			loadn r5, #2000
-			storei r3, r5		; matou o helicoptero em questao
-
-			; os outros helicopteros vao ser naturalmente redesenhados
+		    push r0
+            mov r0, r2
+            call MataHelicoptero
+		    pop r0
 
 		ExplosaoMataObjetos_Helicopteros_Fim:
 			inc r2
-			inc r3
-			dec r4
+			dec r3
 			jnz ExplosaoMataObjetos_Helicopteros
-
 
 	pop r6
 	pop r5
@@ -1255,10 +1197,10 @@ DentroDoRaio:
 	div r5, r7, r6	; y da segunda posicao
 	mod r4, r7, r6	; x da segunda posicao
 
-	; a cpu trabalha com complemento de 2 
+	; a cpu trabalha com complemento de 2
 	; então na hora de elevar ao quadrado
 	; nao vai mudar nada, por isso nao precisamos verificar
-	sub r6, r4, r2	
+	sub r6, r4, r2
 	sub r7, r5, r3
 
 	DentroDoRaio_Calcula:	; r6 distancia dos x
@@ -1303,36 +1245,32 @@ GeraHelicopteroAleatoriamente:
 	push r5
 	push r6
 
-	loadn r0, #posHelicopterosX
-	loadn r1, #posHelicopterosY
-	loadn r2, #5				; quantidade de helicopteros
-	loadn r3, #2000				; flag morto
+	loadn r0, #posHelicopteros
+	loadn r1, #5				; quantidade de helicopteros
+	loadn r2, #2000				; flag morto
 	GeraHelicopteroAleatoriamente_BuscaPosicaoLivre:
-		loadi r4, r1
-		cmp r4, r3
+		loadi r3, r0
+		cmp r3, r2
 		jeq GeraHelicopteroAleatoriamente_CriaHelicoptero
 
 		inc r0
-		inc r1
-		dec r2
+		dec r1
 		jnz GeraHelicopteroAleatoriamente_BuscaPosicaoLivre
 
 	; chegou aqui, ou seja, não tem posicao livre!
 	jmp GeraHelicopteroAleatoriamente_Fim
 
 	GeraHelicopteroAleatoriamente_CriaHelicoptero:
-		; r0 -> end do x da primeira posicao livre
-		; r1 -> end do y da primeira posicao livre
+		; r0 -> end da primeira posicao livre
 		call PegaNumeroAleatorio			; numero aleatorio em r7
+
 		loadn r2, #15						; posicao do x 13 < x < 28
-		mod r2, r7, r2						; r2 = r7 % 36
+		mod r2, r7, r2
 		loadn r3, #13
 		add r2, r2, r3
-		loadn r3, #0
 
-		storei r0, r2
-		storei r1, r3						; todo helicoptero começa em 0
-		
+		storei r0, r2                       ; todo helicoptero começa na linha 0
+
 	GeraHelicopteroAleatoriamente_Fim:
 		pop r6
 		pop r5
@@ -1352,53 +1290,61 @@ DesenhaTodosHelicopteros:
 	push r5
 	push r6
 
-	loadn r0, #posHelicopterosX
-	loadn r1, #posHelicopterosY
-	loadn r2, #CorpoHelicotero
-	loadn r3, #CorpoHelicopteroCaracters
+	loadn r0, #posHelicopteros
+	loadn r1, #5                ; quantidade helicopteros
 
-	loadn r7, #5 				; quantidade helicopteros
+	DesenhaTodosHelicopteros_Loop:
+	    loadi r2, r0
 
-	DesenhaTodosHelicopteros_Loop:			; for(int i = 0; i < 5; i++)
-		; if(combustivel_morto) continue;
-		loadn r6, #2000
-		loadi r5, r1
-		cmp r5, r6
-		jeq DesenhaTodosHelicopteros_Loop_Fim 
+        loadn r3, #2000         ; flag morto
+        cmp r2, r3
+        jeq DesenhaTodosHelicopteros_Loop_Fim
 
-		; calcula posicao absoluta em r4
-		loadi r4, r0
-		loadn r6, #40
-		mul r5, r5, r6
-		add r4, r4, r5
-		
-		loadn r6, #4 ; tamanho vetor corpo helicoptero
-		DesenhaTodosHelicopteros_Loop_Loop:
-			push r4							; protege o r4
+        loadn r3, #CorpoHelicoptero
+        loadn r4, #CorpoHelicopteroCaracters
+        loadn r5, #4                ; tamanho corpo helicoptero
+        DesenhaTodosHelicopteros_Loop_Loop:
+            loadi r6, r3
+            add r6, r6, r2
 
-			; calcula posição do caracter da vez
-			loadi r5, r2
-			add r4, r4, r5
+            loadi r7, r4
+            outchar r7, r6
 
-			; carrega o caracter da vez
-			loadi r5, r3
+            inc r3
+            inc r4
+            dec r5
+            jnz DesenhaTodosHelicopteros_Loop_Loop
 
-			outchar r5, r4
+        DesenhaTodosHelicopteros_Loop_Fim:
+            inc r0
+            dec r1
+            jnz DesenhaTodosHelicopteros_Loop
 
-			pop r4				; libera r4
+	pop r6
+	pop r5
+	pop r4
+	pop r3
+	pop r2
+	pop r1
+	pop r0
+    rts
 
-			inc r3				; incrementa o ponteiro dos vetores
-			inc r2
-			dec r6				; decrementa o contador
-			jnz DesenhaTodosHelicopteros_Loop_Loop	; if(r6 == 0) break;
-		loadn r3, #CorpoHelicopteroCaracters
-		loadn r2, #CorpoHelicotero
+; r0 endereco do helicoptero em questao
+MataHelicoptero:
+    push r0
+	push r1
+	push r2
+	push r3
+	push r4
+	push r5
+	push r6
 
-		DesenhaTodosHelicopteros_Loop_Fim:
-			inc r0
-			inc r1
-			dec r7
-			jnz DesenhaTodosHelicopteros_Loop	; quando zerar r7 acabou
+    ; apago todos os helicopteros da tela antes de perder a posicao dele
+    ; os demais serao redesenhados naturalmente
+	call ApagaTodosHelicopteros
+
+	loadn r1, #2000     ; flag morto
+	storei r0, r1
 
 	pop r6
 	pop r5
@@ -1420,28 +1366,34 @@ MovimentaTodosHelicopteros:
 
 	call ApagaTodosHelicopteros			; helicoptero vai mover, então apago ele
 
-	loadn r0, #posHelicopterosY
+	loadn r0, #posHelicopteros
 	loadn r1, #5 ; quantidade helicopteros
-	
-	; FLAGS
-	loadn r2, #27			; limite vertical
-	loadn r3, #2000		; flag de morto
 
 	MovimentaTodosHelicopteros_Loop:
-		; checa se morreu
-		loadi r4, r0
-		cmp r4, r3
+		loadi r3, r0
+        loadn r4, #2000
+		cmp r3, r4
 		jeq MovimentaTodosHelicopteros_Loop_Fim
 
-		inc r4			; move o helicoptero uma linha para baixo
+        loadn r4, #40
+        add r3, r3, r4  ; desce uma linha
 
-		cmp r4, r2		; if(helicoptero passou limites) matar()
-		jne MovimentaTodosHelicopteros_Loop_Salvar
+        ; lembrar que o corpo do helicopter ocupa 4 quadrados
+        ; então considerando a linha de combustivel não pode
+        ; passar da linha 27, ou seja, posicao 1080
+        loadn r5, #1080 ; limite vertical
+
+		cmp r3, r5		; if(helicoptero passou limites) matar()
+		jgr MovimentaTodosHelicopteros_Loop_Matar
+
+		MovimentaTodosHelicopteros_Loop_Salvar:
+			storei r0, r3
+            jmp MovimentaTodosHelicopteros_Loop_Fim
 
 		MovimentaTodosHelicopteros_Loop_Matar:
-			mov r4, r3			; matou
-		MovimentaTodosHelicopteros_Loop_Salvar:
-			storei r0, r4		; salva o que quer que tenha acontecido com a posição
+			call MataHelicoptero
+			jmp MovimentaTodosHelicopteros_Loop_Fim
+
 		MovimentaTodosHelicopteros_Loop_Fim:
 			inc r0
 			dec r1
@@ -1468,79 +1420,49 @@ ChecaColisaoTodosHelicopteros:
 	push r5
 	push r6
 
-	loadn r0, #CorpoNave
+    loadn r0, #posHelicopteros
+    loadn r1, #5            ; quantidade helicopteros
+    ChecaColisaoTodosHelicopteros_Loop:
+        loadi r2, r0
+        loadn r3, #2000
+        cmp r2, r3
+        jeq ChecaColisaoTodosHelicopteros_Loop_Fim
 
-	; calcula pos absoluta da nave
-	load r1, posNaveX
-	load r2, posNaveY
-	loadn r3, #40
-	mul r2, r2, r3
-	add r1, r1, r2 ; r1 = pos absoluta da nave
-	
-	loadn r2, #CorpoHelicotero
-	loadn r3, #posHelicopterosX
-	loadn r4, #posHelicopterosY
-	; r5 vai guarda posicao absoluta helicoptero
-	; r6 auxiliar
-	
-	; o r7 eu dou push no primeiro loop
-	; para usar ele de contador no segundo loop tambem e no outro tambem
-	; puta gambiarra feia
-	loadn r7, #5	; r7 contador
+        loadn r3, #CorpoHelicoptero
+        loadn r4, #4    ; tamanho corpo helicoptero
+        ChecaColisaoTodosHelicopteros_Loop2:
+            loadi r5, r3
+            add r5, r5, r2  ; offset adicionado
 
-	ChecaColisaoTodosHelicopteros_Loop:
-		push r7
+            loadn r6, #CorpoNave
+            loadn r7, #5        ; tamanho corpo nave
+            ChecaColisaoTodosHelicopteros_Loop3:
+                push r0          ; não consegui não fazer spill aqui
+                push r1          ; perdoem-me
 
-		loadn r0, #CorpoNave			; reseta ponteiro da nave
+                load r0, posNave
+                loadi r1, r6
+                add r0, r0, r1
+                cmp r0, r5
 
-		loadi r5, r3					; r5 = x do helicoptero em questao
-		loadi r6, r4					; r6=  y do helicoptero em questao
-		loadn r7, #2000				; verifica se o helicoptero está morto
+                jeq GameOver   ; COLIDIU
+                ; o próprio gameover reseta o SP, então fehcou os guri
 
-		cmp r6, r7
-		jeq ChecaColisaoTodosHelicopteros_Loop_Fim	; if(morto) continue;
+                pop r1
+                pop r0
 
-		loadn r7, #40			
-		mul r6, r6, r7
-		add r5, r5, r6					; r5 = pos absoluta do helicoptero em questao
+                inc r6
+                dec r7
+                jnz ChecaColisaoTodosHelicopteros_Loop3
 
-		loadn r7, #5					; tamanho do vetor corpo nave
-		ChecaColisaoTodosHelicopteros_Loop2:
-			push r7				
-			push r1						; protege posicao absoluta da nave
+            inc r3
+            dec r4
+            jnz ChecaColisaoTodosHelicopteros_Loop2
 
-			loadn r2, #CorpoHelicotero	; reseta ponteiro do helicoptero
-
-			loadi r6, r0				; calcula posicao da parte especifica da nave
-			add r1, r1, r6
-
-			loadn r7, #4				; tamanho do vetor corpo helicoptero
-			ChecaColisaoTodosHelicopteros_Loop3:
-				push r5					; protege posicao do helicoptero
-
-				loadi r6, r2			
-				add r5, r5, r6			; calcula posicao da parte em questao
-				cmp r1, r5				; se igual gameover
-				jeq GameOver			; a rotina de gameover cuida da pilha bagunçada
-
-				pop r5
-				inc r2					; avanca ponteiro corpo helicoptero
-				dec r7
-				jnz ChecaColisaoTodosHelicopteros_Loop3
-
-			pop r1
-			pop r7
-			inc r0						; avanca ponteiro corpo nave
-			dec r7
-			jnz ChecaColisaoTodosHelicopteros_Loop2
-
-		
-		ChecaColisaoTodosHelicopteros_Loop_Fim:
-			pop r7
-			inc r3
-			inc r4
-			dec r7
-			jnz ChecaColisaoTodosHelicopteros_Loop
+        ChecaColisaoTodosHelicopteros_Loop_Fim:
+            inc r0
+            dec r1
+            jnz ChecaColisaoTodosHelicopteros_Loop
 
 	pop r6
 	pop r5
@@ -1552,7 +1474,7 @@ ChecaColisaoTodosHelicopteros:
 	rts
 
 ApagaTodosHelicopteros:
-	push r0
+    push r0
 	push r1
 	push r2
 	push r3
@@ -1560,49 +1482,34 @@ ApagaTodosHelicopteros:
 	push r5
 	push r6
 
-	loadn r0, #posHelicopterosX
-	loadn r1, #posHelicopterosY
-	loadn r2, #CorpoHelicotero
-	loadn r3, #' '
+	loadn r0, #posHelicopteros
+	loadn r1, #5                ; quantidade helicopteros
 
-	loadn r7, #5 				; quantidade helicopteros
+	ApagaTodosHelicopteros_Loop:
+	    loadi r2, r0
 
-	ApagaTodosHelicopteros_Loop:			; for(int i = 0; i < 5; i++)
-		; if(combustivel_morto) continue;
-		loadn r6, #2000
-		loadi r5, r1
-		cmp r5, r6
-		jeq ApagaTodosHelicopteros_Loop_Fim 
+        loadn r3, #2000         ; flag morto
+        cmp r2, r3
+        jeq ApagaTodosHelicopteros_Loop_Fim
 
-		; calcula posicao absoluta em r4
-		loadi r4, r0
-		loadn r6, #40
-		mul r5, r5, r6
-		add r4, r4, r5
-		
-		loadn r6, #4 ; tamanho vetor corpo helicoptero
-		ApagaTodosHelicopteros_Loop_Loop:
-			push r4							; protege o r4
+        loadn r3, #CorpoHelicoptero
+        loadn r4, #' '
+        loadn r5, #4                ; tamanho corpo helicoptero
 
-			; calcula posição do caracter da vez
-			loadi r5, r2
-			add r4, r4, r5
+        ApagaTodosHelicopteros_Loop_Loop:
+            loadi r6, r3
+            add r6, r6, r2
 
-			outchar r3, r4
+            outchar r4, r6
 
-			pop r4				; libera r4
+            inc r3
+            dec r5
+            jnz ApagaTodosHelicopteros_Loop_Loop
 
-			; incrementa o ponteiro dos vetores
-			inc r2
-			dec r6				; decrementa o contador
-			jnz ApagaTodosHelicopteros_Loop_Loop	; if(r6 == 0) break;
-		loadn r2, #CorpoHelicotero
-
-		ApagaTodosHelicopteros_Loop_Fim:
-			inc r0
-			inc r1
-			dec r7
-			jnz ApagaTodosHelicopteros_Loop	; quando zerar r7 acabou
+        ApagaTodosHelicopteros_Loop_Fim:
+            inc r0
+            dec r1
+            jnz ApagaTodosHelicopteros_Loop
 
 	pop r6
 	pop r5
@@ -1636,18 +1543,18 @@ Delay_Loop2:
 ; r2 = cor da mensagem
 ; não guarda na tela 0! Isso era um problema antes
 ImprimeStr:
-	push r0	
+	push r0
 	push r1
 	push r2
 	push r3
 	push r4
 	push r5
 	push r6
-	
+
 	loadn r3, #'\0'	; Criterio de parada
 	loadn r5, #' '	; Espaco em Branco
 
-   ImprimeStr_Loop:	
+   ImprimeStr_Loop:
 		loadi r4, r1
 		cmp r4, r3		; If (Char == \0)  vai Embora
 		jeq ImprimeStr_Sai
@@ -1659,8 +1566,8 @@ ImprimeStr:
 		inc r0			; Incrementa a posicao na tela
 		inc r1			; Incrementa o ponteiro da String
 		jmp ImprimeStr_Loop
-	
-   ImprimeStr_Sai:	
+
+   ImprimeStr_Sai:
 	pop r6	; Resgata os valores dos registadores utilizados na Subrotina da Pilha
 	pop r5
 	pop r4
@@ -1673,17 +1580,17 @@ ImprimeStr:
 ApagaTela:
 	push r0
 	push r1
-	
+
 	loadn r0, #1200		; apaga as 1200 posicoes da Tela
 	loadn r1, #' '		; com "espaco"
-	
+
 	   ApagaTela_Loop:	;;label for(r0=1200;r3>0;r3--)
 		dec r0
 		outchar r1, r0
 		jnz ApagaTela_Loop
- 
+
 	pop r1
 	pop r0
-	rts	
+	rts
 
 jmp main
