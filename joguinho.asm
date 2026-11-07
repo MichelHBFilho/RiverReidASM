@@ -629,8 +629,7 @@ DesenhaTodosObjetoCombustivel:
 	pop r0
 	rts
 
-; essa subrotina tambem apaga o combustivel
-MovimentaTodosObjetoCombustivel:
+ApagaTodosObjetoCombustivel:
 	push r0
 	push r1
 	push r2
@@ -643,6 +642,52 @@ MovimentaTodosObjetoCombustivel:
 	loadn r1, #posCombustiveisY
 	loadn r2, #3
 	loadn r6, #' '
+
+	ApagaTodosObjetoCombustivel_Loop:
+		loadi r3, r0
+		loadi r4, r1
+
+		; checa se ja morreu
+		loadn r5, #2000
+		cmp r4, r5
+		jeq ApagaTodosObjetoCombustivel_Loop_Fim
+
+		loadn r5, #40
+
+		mul r4, r4, r5
+		add r3, r3, r4
+		outchar r6, r3					; Apaga o combustivel
+
+		ApagaTodosObjetoCombustivel_Loop_Fim:
+			inc r0
+			inc r1
+			dec r2
+			jnz ApagaTodosObjetoCombustivel_Loop
+
+	
+	pop r6
+	pop r5
+	pop r4
+	pop r3
+	pop r2
+	pop r1
+	pop r0
+	rts
+
+MovimentaTodosObjetoCombustivel:
+	push r0
+	push r1
+	push r2
+	push r3
+	push r4
+	push r5
+	push r6
+
+	call ApagaTodosObjetoCombustivel
+
+	loadn r0, #posCombustiveisX
+	loadn r1, #posCombustiveisY
+	loadn r2, #3
 
 	MovimentaTodosObjetoCombustivel_Loop:
 		loadi r3, r0
@@ -657,7 +702,6 @@ MovimentaTodosObjetoCombustivel:
 
 		mul r4, r4, r5
 		add r3, r3, r4
-		outchar r6, r3					; Apaga o combustivel
 
 		; Atualizo o y do combustivel e storo
 		loadi r4, r1
@@ -1039,6 +1083,51 @@ ChecaColisaoTodosTiros:
 				dec r3
 				jnz ChecaColisaoTodosTiros_Loop_Helicopteros 
 
+		loadn r1, #posCombustiveisX
+		loadn r2, #posCombustiveisY
+		loadn r3, #3			; quantidade de combustiveis
+		ChecaColisaoTodosTiros_Loop_Combustivel:
+			push r1
+			push r2
+
+			loadi r1, r1
+			loadi r2, r2
+			loadn r4, #2000
+
+			cmp r2, r4
+			jeq ChecaColisaoTodosTiros_Loop_Combustivel_Fim
+
+			loadn r4, #40
+			mul r2, r2, r4
+			add r1, r1, r2
+
+			cmp r0, r1
+			jne ChecaColisaoTodosTiros_Loop_Combustivel_Fim
+
+			; r0 posicao inicial
+			; r1 raio
+			loadn r1, #2
+			call ExplosaoMataObjetos
+
+			pop r2
+			pop r1
+			
+			push r0
+			mov r0, r2
+			call MataObjetoCombustivel
+			pop r0
+
+			jmp ChecaColisaoTodosTiros_Loop_MatarTiro
+
+			ChecaColisaoTodosTiros_Loop_Combustivel_Fim:
+				pop r2
+				pop r1
+
+				inc r1
+				inc r2
+				dec r3
+				jnz ChecaColisaoTodosTiros_Loop_Combustivel
+
 		jmp ChecaColisaoTodosTiros_Loop_Fim		; se chegou até aqui o tiro não matou ninguem
 
 		ChecaColisaoTodosTiros_Loop_MatarTiro:
@@ -1073,6 +1162,133 @@ ChecaColisaoTodosTiros:
 	pop r1
 	pop r0
 	rts
+
+; r0 = endereço do y
+MataObjetoCombustivel:
+	push r0
+	push r1
+
+	call ApagaTodosObjetoCombustivel
+
+	loadn r1, #2000
+	storei r0, r1
+
+	pop r1
+	pop r0
+	rts
+
+
+; r0 = pos inicial
+; r1 = raio
+ExplosaoMataObjetos:
+	push r0
+	push r1
+	push r2
+	push r3
+	push r4
+	push r5
+	push r6
+
+	loadn r2, #posHelicopterosX
+	loadn r3, #posHelicopterosY
+	loadn r4, #5				; quantidade de helicopteros
+	ExplosaoMataObjetos_Helicopteros:
+		loadi r5, r2
+		loadi r6, r3
+
+		loadn r7, #2000
+		cmp r6, r7
+		jeq ExplosaoMataObjetos_Helicopteros_Fim
+
+		loadn r7, #40
+		mul r6, r6, r7
+		add r5, r5, r6
+
+		mov r7, r5			; parametro no r7
+		call DentroDoRaio	; retorno no r7
+
+		loadn r5, #1
+		cmp r7, r5
+		jne ExplosaoMataObjetos_Helicopteros_Fim
+
+		ExplosaoMataObjetos_Helicopteros_Matou:
+			call ApagaTodosHelicopteros	; apago todos helicopteros ANTES de matar
+
+			loadn r5, #2000
+			storei r3, r5		; matou o helicoptero em questao
+
+			; os outros helicopteros vao ser naturalmente redesenhados
+
+		ExplosaoMataObjetos_Helicopteros_Fim:
+			inc r2
+			inc r3
+			dec r4
+			jnz ExplosaoMataObjetos_Helicopteros
+
+
+	pop r6
+	pop r5
+	pop r4
+	pop r3
+	pop r2
+	pop r1
+	pop r0
+	rts
+
+; r0 = pos inicial
+; r1 = raio
+; r7 = segunda posicao
+; retorno 0/1 no r7
+DentroDoRaio:
+	push r0
+	push r1
+	push r2
+	push r3
+	push r4
+	push r5
+	push r6
+
+	loadn r6, #40
+	div r3, r0, r6	; y da primeira posicao
+	mod r2, r0, r6	; x da primeira posicao
+
+	div r5, r7, r6	; y da segunda posicao
+	mod r4, r7, r6	; x da segunda posicao
+
+	; a cpu trabalha com complemento de 2 
+	; então na hora de elevar ao quadrado
+	; nao vai mudar nada, por isso nao precisamos verificar
+	sub r6, r4, r2	
+	sub r7, r5, r3
+
+	DentroDoRaio_Calcula:	; r6 distancia dos x
+							; r7 distancia dos y
+		mul r6, r6, r6		; r6 ao quadrado
+		mul r7, r7, r7		; r7 ao quadrado
+		mul r1, r1, r1		; raio ao quadrado
+		add r6, r6, r7		; r6 = (r6)^2 + (r7)^2
+
+		cmp r6, r1
+		jle DentroDoRaio_Dentro
+		jgr DentroDoRaio_Fora
+
+	DentroDoRaio_Dentro:
+		loadn r7, #1
+		jmp DentroDoRaio_Fim
+	DentroDoRaio_Fora:
+		loadn r7, #0
+		jmp DentroDoRaio_Fim
+
+	DentroDoRaio_Fim:
+		pop r6
+		pop r5
+		pop r4
+		pop r3
+		pop r2
+		pop r1
+		pop r0
+		rts
+
 
 ; ======================
 ;  Funções Helicopteros
