@@ -77,7 +77,7 @@ RAND: var #30
 	static RAND + #20, #2
 	static RAND + #21, #45
 	static RAND + #22, #4
-	static RAND + #23, #67
+	static RAND + #23, #69
 	static RAND + #24, #21
 	static RAND + #25, #24
 	static RAND + #26, #71
@@ -443,7 +443,7 @@ ConsomeCombustivel:
 	push r6
 
 	load r0, contadorFrames
-	loadn r1, #100
+	loadn r1, #200
 	mod r0, r0, r1
 
 	jnz ConsomeCombustivel_Fim
@@ -540,9 +540,9 @@ GeraObjetoCombustivelAleatoriamente:
 		; r0 end x do obj livre
 		; r1 end y do obj livre
 		call PegaNumeroAleatorio		; gera um numero aleatorio em r7
-		loadn r2, #36					; 2 < x < 38
+		loadn r2, #15					; 13 < x < 28
 		mod r2, r7, r2
-		loadn r3, #2
+		loadn r3, #13
 		add r2, r2, r3
 
 		storei r0, r2
@@ -1079,9 +1079,9 @@ GeraHelicopteroAleatoriamente:
 		; r0 -> end do x da primeira posicao livre
 		; r1 -> end do y da primeira posicao livre
 		call PegaNumeroAleatorio			; numero aleatorio em r7
-		loadn r2, #35						; posicao do x 2 < x < 38
-		mod r2, r7, r2						; r2 = r7 % 40
-		loadn r3, #3
+		loadn r2, #15						; posicao do x 13 < x < 28
+		mod r2, r7, r2						; r2 = r7 % 36
+		loadn r3, #13
 		add r2, r2, r3
 		loadn r3, #0
 
