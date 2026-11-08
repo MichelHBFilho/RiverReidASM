@@ -10,6 +10,8 @@ jmp main
 ;     Variaveis Nave
 ; ======================
 	; Posicoes do corpo com relacao a cabeca da nave
+	TamanhoCorpoNave: var #1
+	    static TamanhoCorpoNave + #0, #5
 	CorpoNave: var #5
 		static CorpoNave + #0, #0	; Cabeca		[0] = 0
 		static CorpoNave + #1, #39	; Asa esquerda	[1] = 39
@@ -28,9 +30,13 @@ jmp main
 	CorpoCombustivelObjeto: var #1
 		static CorpoCombustivelObjeto + #0, #0
 
+    QuantidadeCombustiveis: var #1
+        static QuantidadeCombustiveis + #0, #3
 	posCombustiveis: var #3
 
 	; 3 tiros ao mesmo tempo na tela parece razoavel
+	QuantidadeTiros: var #1
+	    static QuantidadeTiros + #0, #3
 	posTiros: var #3
 
 	CorpoTiroCaracter: var #1
@@ -39,16 +45,26 @@ jmp main
 ; Variaveis Helicopteros
 ; ======================
 	; Posicoes do corpo com relacao ao parte superior esquerda do helicoptero
+	TamanhoCorpoHelicoptero: var #1
+	    static TamanhoCorpoHelicoptero + #0, #4
 	CorpoHelicoptero: var #4
-		static CorpoHelicoptero + #0, #0		; Sup Esquerda	[0] = 0
-		static CorpoHelicoptero + #1, #1		; Sup Direita	[1] = 39
+		static CorpoHelicoptero + #0, #0	; Sup Esquerda	[0] = 0
+		static CorpoHelicoptero + #1, #1	; Sup Direita	[1] = 39
 		static CorpoHelicoptero + #2, #41	; Inf Direita	[2] = 40
 		static CorpoHelicoptero + #3, #40	; Inf Esquerda 	[3] = 41
 	CorpoHelicopteroCaracters: string "nold"
 
 	; Guarda a posição de  5 helicopteros
 	; 2000 -> Objeto Morto
+    QuantidadeHelicopteros: var #1
+	    static QuantidadeHelicopteros + #0, #5
 	posHelicopteros: var #5
+; ======================
+;         FLAGS
+; ======================
+    FlagMorto: var #1
+        static FlagMorto + #0, #2000
+
 
 contadorFrames: var #1						; Conta frames para operar
 
@@ -128,27 +144,27 @@ ResetaVariaveis:
     loadn r0, #30
 	store combustivelNave, r0
 
-	loadn r0, #2000
+	load r0, FlagMorto
 	loadn r1, #posCombustiveis
-	loadn r2, #3				; quantidade de combustiveis
+	load r2, QuantidadeCombustiveis
 	ResetaVariaveis_MataCombustivel:
 		storei r1, r0
 		inc r1
 		dec r2
 		jnz ResetaVariaveis_MataCombustivel
 
-	loadn r0, #2000
+	load r0, FlagMorto
 	loadn r1, #posHelicopteros
-	loadn r2, #5				; quantidade de helicopteros
+	load r2, QuantidadeHelicopteros
 	ResetaVariaveis_MataHelicoptero:
 		storei r1, r0
 		inc r1
 		dec r2
 		jnz ResetaVariaveis_MataHelicoptero
 
-	loadn r0, #2000
+	load r0, FlagMorto
 	loadn r1, #posTiros
-	loadn r2, #3				; quantidade de tiros
+	load r2, QuantidadeTiros
 	ResetaVariaveis_MataTiros:
 		storei r1, r0
 		inc r1
@@ -323,7 +339,7 @@ DesenharNave:
     loadn r1, #CorpoNave
     loadn r2, #CorpoNaveCaracteres
 
-    loadn r6, #5
+    load r6, TamanhoCorpoNave
 
     DesenharNaveLoop:		; for(int i = 0; i < 5; i++)
         mov r3, r0 			; colocar posicao absoluta em r3
@@ -365,7 +381,7 @@ ApagaNave:
 	; TODO - preencher com o fundo
     loadn r5, #' '			; Preenche com espaço branco!
 
-    loadn r6, #5
+    load r6, TamanhoCorpoNave
 
     ApagaNaveLoop:
         mov r3, r0 			; posicao absoluta em r3
@@ -563,8 +579,8 @@ GeraObjetoCombustivelAleatoriamente:
 	push r6
 
 	loadn r0, #posCombustiveis
-	loadn r1, #3 				; quantidade objetos combustivel
-	loadn r2, #2000				; flag morto
+	load r1, QuantidadeCombustiveis
+	load r2, FlagMorto
 	GeraObjetoCombustivelAleatoriamente_BuscaEspacoLivre:
 		loadi r3, r0
 		cmp r3, r2
@@ -608,7 +624,7 @@ DesenhaTodosObjetoCombustivel:
 	push r6
 
 	loadn r0, #posCombustiveis
-	loadn r1, #3
+	load r1, QuantidadeCombustiveis
 	load r2, CombustivelObjetoCaracter
 
 	DesenhaObjetoCombustivel_Loop:
@@ -616,7 +632,7 @@ DesenhaTodosObjetoCombustivel:
 
 		; Checa se o combustivel está morto
 		; se estiver morto não tem que desenahr
-		loadn r5, #2000
+		load r5, FlagMorto
 		cmp r3, r5
 		jeq DesenhaObjetoCombustivel_Loop_Fim
 
@@ -646,14 +662,14 @@ ApagaTodosObjetoCombustivel:
 	push r6
 
 	loadn r0, #posCombustiveis
-	loadn r1, #3
+	load r1, QuantidadeCombustiveis
 	loadn r2, #' '
 
 	ApagaTodosObjetoCombustivel_Loop:
 		loadi r3, r0
 
 		; checa se ja morreu
-		loadn r4, #2000
+		load r4, FlagMorto
 		cmp r3, r4
 		jeq ApagaTodosObjetoCombustivel_Loop_Fim
 
@@ -685,13 +701,13 @@ MovimentaTodosObjetoCombustivel:
 	call ApagaTodosObjetoCombustivel
 
 	loadn r0, #posCombustiveis
-	loadn r2, #3
+	load r2, QuantidadeCombustiveis
 
 	MovimentaTodosObjetoCombustivel_Loop:
 		loadi r3, r0
 
 		; checa se morreu
-		loadn r4, #2000
+		load r4, FlagMorto
 		cmp r3, r4
 		jeq MovimentaTodosObjetoCombustivel_Loop_Fim
 
@@ -702,7 +718,7 @@ MovimentaTodosObjetoCombustivel:
 		cmp r3, r5
 		jle MovimentaTodosObjetoCombustivel_Loop_Salva
 
-		loadn r3, #2000
+		load r3, FlagMorto
 
 		MovimentaTodosObjetoCombustivel_Loop_Salva:
 			storei r0, r3
@@ -733,17 +749,17 @@ ChecaColisaoTodosObjetoCombustivel:
 	push r6
 
 	loadn r0, #posCombustiveis
-	loadn r1, #3                ; quantidade de objetos combustivel
+	load r1, QuantidadeCombustiveis
 	ChecaColisaoTodosObjetoCombustivel_Loop:
 	    loadi r2, r0
 
-		loadn r3, #2000
+		load r3, FlagMorto
 		cmp r2, r3
 		jeq ChecaColisaoTodosObjetoCombustivel_Loop_Fim
 
         load r3, posNave
 	    loadn r4, #CorpoNave
-	    loadn r5, #5            ; tamanho corpo nave
+	    load r5, TamanhoCorpoNave
 		ChecaColisaoTodosObjetoCombustivel_Loop_2:
 		    loadi r6, r4
 			add r6, r6, r3
@@ -793,8 +809,8 @@ Atirar:
 	loadn r1, #40
 	sub r0, r0, r1
 
-	loadn r2, #2000	   ; flag de morto
-	loadn r3, #3			; quantidade de tiros
+	load r2, FlagMorto
+	load r3, QuantidadeTiros
 	loadn r4, #posTiros
 
 	Atirar_ProcuraPosicaoLivre:
@@ -832,10 +848,10 @@ DesenhaTodosTiros:
 
 	loadn r0, #posTiros
 	load r2, CorpoTiroCaracter
-	loadn r3, #3				; quantidade de tiros
+	load r3, QuantidadeTiros
 	DesenhaTodosTiros_Loop:
 		loadi r4, r0
-		loadn r5, #2000 ; flag morto
+		load r5, FlagMorto
 		cmp r4, r5
 		jeq DesenhaTodosTiros_Loop_Fim
 
@@ -868,11 +884,11 @@ ApagaTodosTiros:
 	loadn r0, #posTiros
 
 	loadn r2, #' '
-	loadn r3, #3				; quantidade de tiros
+	load r3, QuantidadeTiros
 
 	ApagaTodosTiros_Loop:
 		loadi r4, r0
-		loadn r5, #2000 ; flag morto
+		load r5, FlagMorto
 		cmp r4, r5
 		jeq ApagaTodosTiros_Loop_Fim
 
@@ -905,8 +921,8 @@ MovimentaTodosTiros:
 	call ApagaTodosTiros
 
 	loadn r0, #posTiros
-	loadn r1, #2000		; flag de morto
-	loadn r2, #3			 ; quantidade de tiros
+    load r1, FlagMorto
+	load r2, QuantidadeTiros
 
 	MovimentaTodosTiros_Loop:
 		loadi r3, r0
@@ -921,7 +937,7 @@ MovimentaTodosTiros:
 		; no simulador que eu uso, a CPU do ICMC quando
 		; da negativo fica igual a zero, por isso estou
 		; comparando com 0 aqui em baixo :P
-    
+
         loadn r4, #0
         cmp r3, r4
 		jne MovimentaTodosTiros_Salvar
@@ -957,11 +973,11 @@ ChecaColisaoTodosTiros:
 	push r6
 
 	loadn r0, #posTiros
-	loadn r1, #3
+	load r1, QuantidadeTiros
 
 	ChecaColisaoTodosTiros_Loop:
         loadi r2, r0
-        loadn r3, #2000 ; flag morto
+        load r3, FlagMorto
 		cmp r2, r3
 		jeq ChecaColisaoTodosTiros_Loop_Fim
 
@@ -988,8 +1004,8 @@ ChecaColisaoTodosTiros:
 		jmp ChecaColisaoTodosTiros_Loop_Fim
 
     ChecaColisaoTodosTiros_Loop_MatarTiro:
-      loadn r2, #2000     ; flag de morto
-      storei r0, r2
+        load r2, FlagMorto
+        storei r0, r2
 
 		ChecaColisaoTodosTiros_Loop_Fim:
 		  inc r0
@@ -1020,16 +1036,16 @@ ChecaColisaoTiroHelicopteros:
 	loadn r7, #0        ; comeca com não
 
 	loadn r1, #posHelicopteros
-	loadn r2, #5        ; quantidade de helicopteros
+	load r2, QuantidadeHelicopteros
 
 	ChecaColisaoTiroHelicopteros_Loop:
 	    loadi r3, r1
-		loadn r4, #2000   ; flag morto
+		load r4, FlagMorto
 		cmp r3, r4
 		jeq ChecaColisaoTiroHelicopteros_Loop_Fim
 
         loadn r4, #CorpoHelicoptero
-        loadn r5, #4  ; tamanho corpo
+        load r5, TamanhoCorpoHelicoptero
 		ChecaColisaoTiroHelicopteros_Loop_Loop:
 		    loadi r6, r4
 			add r6, r3, r6
@@ -1080,10 +1096,10 @@ ChecaColisaoTiroCombutiveis:
     loadn r7, #0
 
     loadn r1, #posCombustiveis
-	loadn r2, #3          ; quantidade combustiveis
+	load r2, QuantidadeCombustiveis
 	ChecaColisaoTiroCombutiveis_Loop:
 	    loadi r3, r1
-		loadn r4, #2000     ; flag morto
+		load r4, FlagMorto
 		cmp r3, r4
 		jeq ChecaColisaoTiroCombutiveis_Loop_Fim
 
@@ -1123,7 +1139,7 @@ MataObjetoCombustivel:
 
 	call ApagaTodosObjetoCombustivel
 
-	loadn r1, #2000
+	load r1, FlagMorto
 	storei r0, r1
 
 	pop r1
@@ -1143,11 +1159,11 @@ ExplosaoMataObjetos:
 	push r6
 
 	loadn r2, #posHelicopteros
-	loadn r3, #5				; quantidade de helicopteros
+	load r3, QuantidadeHelicopteros
 	ExplosaoMataObjetos_Helicopteros:
 		loadi r4, r2
 
-		loadn r5, #2000
+		load r5, FlagMorto
 		cmp r4, r5
 		jeq ExplosaoMataObjetos_Helicopteros_Fim
 
@@ -1247,8 +1263,8 @@ GeraHelicopteroAleatoriamente:
 	push r6
 
 	loadn r0, #posHelicopteros
-	loadn r1, #5				; quantidade de helicopteros
-	loadn r2, #2000				; flag morto
+	load r1, QuantidadeHelicopteros
+	load r2, FlagMorto
 	GeraHelicopteroAleatoriamente_BuscaPosicaoLivre:
 		loadi r3, r0
 		cmp r3, r2
@@ -1292,18 +1308,18 @@ DesenhaTodosHelicopteros:
 	push r6
 
 	loadn r0, #posHelicopteros
-	loadn r1, #5                ; quantidade helicopteros
+	load r1, QuantidadeHelicopteros
 
 	DesenhaTodosHelicopteros_Loop:
 	    loadi r2, r0
 
-        loadn r3, #2000         ; flag morto
+        load r3, FlagMorto
         cmp r2, r3
         jeq DesenhaTodosHelicopteros_Loop_Fim
 
         loadn r3, #CorpoHelicoptero
         loadn r4, #CorpoHelicopteroCaracters
-        loadn r5, #4                ; tamanho corpo helicoptero
+        load r5, TamanhoCorpoHelicoptero
         DesenhaTodosHelicopteros_Loop_Loop:
             loadi r6, r3
             add r6, r6, r2
@@ -1344,7 +1360,7 @@ MataHelicoptero:
     ; os demais serao redesenhados naturalmente
 	call ApagaTodosHelicopteros
 
-	loadn r1, #2000     ; flag morto
+	load r1, FlagMorto
 	storei r0, r1
 
 	pop r6
@@ -1368,11 +1384,11 @@ MovimentaTodosHelicopteros:
 	call ApagaTodosHelicopteros			; helicoptero vai mover, então apago ele
 
 	loadn r0, #posHelicopteros
-	loadn r1, #5 ; quantidade helicopteros
+	load r1, QuantidadeHelicopteros
 
 	MovimentaTodosHelicopteros_Loop:
 		loadi r3, r0
-        loadn r4, #2000
+        load r4, FlagMorto
 		cmp r3, r4
 		jeq MovimentaTodosHelicopteros_Loop_Fim
 
@@ -1422,21 +1438,21 @@ ChecaColisaoTodosHelicopteros:
 	push r6
 
     loadn r0, #posHelicopteros
-    loadn r1, #5            ; quantidade helicopteros
+    load r1, QuantidadeHelicopteros
     ChecaColisaoTodosHelicopteros_Loop:
         loadi r2, r0
-        loadn r3, #2000
+        load r3, FlagMorto
         cmp r2, r3
         jeq ChecaColisaoTodosHelicopteros_Loop_Fim
 
         loadn r3, #CorpoHelicoptero
-        loadn r4, #4    ; tamanho corpo helicoptero
+        load r4, TamanhoCorpoHelicoptero
         ChecaColisaoTodosHelicopteros_Loop2:
             loadi r5, r3
             add r5, r5, r2  ; offset adicionado
 
             loadn r6, #CorpoNave
-            loadn r7, #5        ; tamanho corpo nave
+            load r7, TamanhoCorpoNave
             ChecaColisaoTodosHelicopteros_Loop3:
                 push r0          ; não consegui não fazer spill aqui
                 push r1          ; perdoem-me
@@ -1484,18 +1500,18 @@ ApagaTodosHelicopteros:
 	push r6
 
 	loadn r0, #posHelicopteros
-	loadn r1, #5                ; quantidade helicopteros
+	load r1, QuantidadeHelicopteros
 
 	ApagaTodosHelicopteros_Loop:
 	    loadi r2, r0
 
-        loadn r3, #2000         ; flag morto
+        load r3, FlagMorto
         cmp r2, r3
         jeq ApagaTodosHelicopteros_Loop_Fim
 
         loadn r3, #CorpoHelicoptero
         loadn r4, #' '
-        loadn r5, #4                ; tamanho corpo helicoptero
+        load r5, TamanhoCorpoHelicoptero
 
         ApagaTodosHelicopteros_Loop_Loop:
             loadi r6, r3
