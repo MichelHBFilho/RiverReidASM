@@ -24,7 +24,7 @@ jmp main
 
 	; Três combustiveis ao maximo na tela ao mesmo tempo
 	CombustivelObjetoCaracter: var #1
-		static CombustivelObjetoCaracter + #0, #'f'
+		static CombustivelObjetoCaracter + #0, #2918
 	CorpoCombustivelObjeto: var #1
 		static CorpoCombustivelObjeto + #0, #0
 
@@ -33,7 +33,8 @@ jmp main
 	; 3 tiros ao mesmo tempo na tela parece razoavel
 	posTiros: var #3
 
-	CorpoTiroCaracter: string "A"
+	CorpoTiroCaracter: var #1
+		static CorpoTiroCaracter + #0, #2409
 ; ======================
 ; Variaveis Helicopteros
 ; ======================
@@ -619,10 +620,7 @@ DesenhaTodosObjetoCombustivel:
 		cmp r3, r5
 		jeq DesenhaObjetoCombustivel_Loop_Fim
 
-		loadn r4, #2816
-		add r4, r4, r2
-
-		outchar r4, r3
+		outchar r2, r3
 
 		DesenhaObjetoCombustivel_Loop_Fim:
 			inc r0
@@ -1529,7 +1527,7 @@ Delay:
 
     loadn r0, #10
 Delay_Loop1:
-    loadn r1, #1000
+    loadn r1, #10000
 Delay_Loop2:
     dec r1
     jnz Delay_Loop2
