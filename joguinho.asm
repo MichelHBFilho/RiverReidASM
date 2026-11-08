@@ -24,7 +24,7 @@ jmp main
 
 	; Três combustiveis ao maximo na tela ao mesmo tempo
 	CombustivelObjetoCaracter: var #1
-		static CombustivelObjetoCaracter + #0, #'F'
+		static CombustivelObjetoCaracter + #0, #'f'
 	CorpoCombustivelObjeto: var #1
 		static CorpoCombustivelObjeto + #0, #0
 
@@ -619,7 +619,10 @@ DesenhaTodosObjetoCombustivel:
 		cmp r3, r5
 		jeq DesenhaObjetoCombustivel_Loop_Fim
 
-		outchar r2, r3
+		loadn r4, #2816
+		add r4, r4, r2
+
+		outchar r4, r3
 
 		DesenhaObjetoCombustivel_Loop_Fim:
 			inc r0
