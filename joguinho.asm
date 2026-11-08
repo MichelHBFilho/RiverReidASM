@@ -104,6 +104,7 @@ ContadorAleatorio: var #1
 main:
 	call ApagaTela
     call ResetaVariaveis
+    call DesenhaCenario
 
 	mainLoop:
 		call Desenha
@@ -280,7 +281,7 @@ Movimenta:
 	loadn r0, #50 			; os demais objetos se movimentam a cada 50 ciclos
 	load r1, contadorFrames
 	mod r0, r1, r0
-	jnz MovimentaFim
+	jnz MovimentaNave_Fim
 
 	call MovimentaTodosHelicopteros
 	call MovimentaTodosObjetoCombustivel
@@ -415,41 +416,41 @@ MovimentaNave:
 	inchar r0 				; if(r0 == 'a') esquerda() else if(r0 == 'd') direita()
 	loadn r1, #'a'
 	cmp r0, r1
-	jeq MovimentaEsquerda
+	jeq MovimentaNave_Esquerda
 	loadn r1, #'d'
 	cmp r0, r1
-	jeq MovimentaDireita
+	jeq MovimentaNave_Direita
 	loadn r1, #' '
 	cmp r0, r1
 	ceq Atirar
-	jmp MovimentaFim
+	jmp MovimentaNave_Fim
 
-	MovimentaEsquerda:
+	MovimentaNave_Esquerda:
 		call ApagaNave		; apago a nave se mexer
 
 		load r0, posNave
-		loadn r1, #1001		; Limite a esquerda
+		loadn r1, #1013		; Limite a esquerda
 
 		dec r0 				; Movimenta para esquerda
 		cmp r0, r1 			; if(posX < 1) return
-		jle MovimentaFim
+		jle MovimentaNave_Fim
 		store posNave, r0
 
-		jmp MovimentaFim
+		jmp MovimentaNave_Fim
 
-	MovimentaDireita:
+	MovimentaNave_Direita:
 		call ApagaNave
 
 		load r0, posNave
-		loadn r1, #1038		; Limite a direita
+		loadn r1, #1026		; Limite a direita
 
 		inc r0 				; Movimenta para direita
 		cmp r0, r1 			; if(posX > 39) return
-		jgr MovimentaFim
+		jgr MovimentaNave_Fim
 		store posNave, r0
-		jmp MovimentaFim
+		jmp MovimentaNave_Fim
 
-	MovimentaFim:
+	MovimentaNave_Fim:
 		pop r6
 		pop r5
 		pop r4
@@ -1609,5 +1610,67 @@ ApagaTela:
 	pop r1
 	pop r0
 	rts
+
+; ====================
+;       CENÁRIO
+; ====================
+
+; basicamente só desenha grama em toda tela da coluna 0 a 12
+; até a ultima linha que tem a resenha do combustivel
+DesenhaCenario:
+    push r0
+	push r1
+	push r2
+	push r3
+	push r4
+	push r5
+	push r6
+
+	loadn r0, #2599     ; ' verde grama
+	loadn r1, #0        ; pos inicial
+	loadn r2, #28       ; ultima linha
+	loadn r4, #0        ; linha atual
+
+	DesenhaCenario_Loop1:
+	    inc r4
+	    loadn r3, #12   ; 12 colunas
+        DesenhaCenario_Loop1_Loop:
+    		outchar r0, r1
+            inc r1
+            dec r3
+            jnz DesenhaCenario_Loop1_Loop
+        loadn r5, #40
+        mul r1, r4, r5
+        dec r2
+        jnz DesenhaCenario_Loop1
+
+    loadn r1, #29        ; pos inicial
+	loadn r2, #28       ; ultima linha
+	loadn r4, #0        ; linha atual
+
+	DesenhaCenario_Loop2:
+	    inc r4
+	    loadn r3, #12   ; 12 colunas
+        DesenhaCenario_Loop2_Loop:
+    		outchar r0, r1
+            inc r1
+            dec r3
+            jnz DesenhaCenario_Loop2_Loop
+        loadn r5, #40
+        mul r1, r4, r5
+        loadn r5, #28
+        add r1, r1, r5
+        dec r2
+        jnz DesenhaCenario_Loop2
+
+	pop r6
+	pop r5
+	pop r4
+	pop r3
+	pop r2
+	pop r1
+	pop r0
+    rts
+
 
 jmp main
