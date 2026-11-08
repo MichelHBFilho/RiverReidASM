@@ -281,7 +281,7 @@ Movimenta:
 	loadn r0, #50 			; os demais objetos se movimentam a cada 50 ciclos
 	load r1, contadorFrames
 	mod r0, r1, r0
-	jnz MovimentaNave_Fim
+	jnz Movimenta_Fim
 
 	call MovimentaTodosHelicopteros
 	call MovimentaTodosObjetoCombustivel
