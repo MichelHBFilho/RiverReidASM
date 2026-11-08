@@ -24,7 +24,7 @@ jmp main
 
 	; Três combustiveis ao maximo na tela ao mesmo tempo
 	CombustivelObjetoCaracter: var #1
-		static CombustivelObjetoCaracter + #0, #2918
+		static CombustivelObjetoCaracter + #0, #2918    ; f amarelo
 	CorpoCombustivelObjeto: var #1
 		static CorpoCombustivelObjeto + #0, #0
 
@@ -34,7 +34,7 @@ jmp main
 	posTiros: var #3
 
 	CorpoTiroCaracter: var #1
-		static CorpoTiroCaracter + #0, #2409
+		static CorpoTiroCaracter + #0, #2409            ; i vermelho claro
 ; ======================
 ; Variaveis Helicopteros
 ; ======================
