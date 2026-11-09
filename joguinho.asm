@@ -66,6 +66,20 @@ jmp main
 	    static QuantidadeHelicopteros + #0, #5
 	posHelicopteros: var #5
 ; ======================
+; 	 Variaveis Barcos
+; ======================
+	TamanhoCorpoBarco: var #1
+		static TamanhoCorpoBarco + #0, #2
+	CorpoBarco: var #2
+		static CorpoBarco + #0, #0
+		static CorpoBarco + #1, #1
+	CorpoBarcoCaracteres: var #2
+		static CorpoBarcoCaracteres + #0, #'B'
+		static CorpoBarcoCaracteres + #1, #'B'
+	QuantidadeBarcos: var #1
+		static QuantidadeBarcos + #0, #4
+	posBarcos: var #4
+; ======================
 ;         FLAGS
 ; ======================
     FlagMorto: var #1
@@ -178,6 +192,15 @@ ResetaVariaveis:
 		dec r2
 		jnz ResetaVariaveis_MataTiros
 
+	load r0, FlagMorto
+	loadn r1, #posBarcos
+	load r2, QuantidadeBarcos
+	ResetaVariaveis_MataBarcos:
+		storei r1, r0
+		inc r1
+		dec r2
+		jnz ResetaVariaveis_MataBarcos
+
 	loadn r0, #0
 	store ContadorAleatorio, r0
 	store contadorFrames, r0
@@ -240,6 +263,7 @@ Desenha:
 	call DesenhaTodosHelicopteros
 	call DesenhaTodosObjetoCombustivel
 	call DesenhaTodosTiros
+	call DesenhaTodosBarcos
 
 	pop r6
 	pop r5
@@ -292,6 +316,14 @@ Movimenta:
 	call MovimentaTodosHelicopteros
 	call MovimentaTodosObjetoCombustivel
 
+	; como o movimenta barco tem dois componentes
+	; eu optei por deixar a checagem de colisao aqui
+	; em vez de dentro das funções, porque desse jeito
+	; ele calcula só uma vez
+	call MovimentaTodosBarcosVertical
+	call MovimentaTodosBarcosHorizontal
+	call ChecaColisaoTodosBarcos
+
 	Movimenta_Fim:
 		pop r6
 		pop r5
@@ -318,6 +350,9 @@ GeraObjetosAleatoriamente:
 	loadn r1, #150
 	mod r2, r0, r1
 	cz GeraHelicopteroAleatoriamente
+	loadn r1, #200
+	mod r2, r0, r1
+	cz GeraBarcoAleatoriamente
 
 	pop r6
 	pop r5
@@ -988,8 +1023,9 @@ ChecaColisaoTodosTiros:
 		cmp r2, r3
 		jeq ChecaColisaoTodosTiros_Loop_Fim
 
+		; CHECA COLISAO DO TIRO COM HELICOPTERO
 		push r0
-		mov r0, r2  ; r0 guarda a posicao do tiro em questao
+		mov r0, r2  	; r0 guarda a posicao do tiro em questao
 		call ChecaColisaoTiroHelicopteros
 		pop r0
 
@@ -1000,9 +1036,19 @@ ChecaColisaoTodosTiros:
 		cmp r7, r3
 		jeq ChecaColisaoTodosTiros_Loop_MatarTiro
 
+		; CHECA COLISAO DO TIRO COM COMBUSTÍVEL
 		push r0
 		mov r0, r2
 		call ChecaColisaoTiroCombutiveis
+		pop r0
+
+		cmp r7, r3
+		jeq ChecaColisaoTodosTiros_Loop_MatarTiro
+
+		; CHECA COLISAO DO TIRO COM BARCO
+		push r0
+		mov r0, r2
+		call ChecaColisaoTiroBarcos
 		pop r0
 
 		cmp r7, r3
@@ -1191,6 +1237,33 @@ ExplosaoMataObjetos:
 			inc r2
 			dec r3
 			jnz ExplosaoMataObjetos_Helicopteros
+
+	loadn r2, #posBarcos
+	load r3, QuantidadeBarcos
+	ExplosaoMataObjetos_Barcos:
+		loadi r4, r2
+
+		load r5, FlagMorto
+		cmp r4, r5
+		jeq ExplosaoMataObjetos_Barcos_Fim
+
+		mov r7, r4
+		call DentroDoRaio
+
+		loadn r5, #1
+		cmp r7, r5
+		jne ExplosaoMataObjetos_Barcos_Fim
+
+		ExplosaoMataObjetos_Barcos_Matou:
+			push r0
+			mov r0, r2
+			call MataBarco
+			pop r0
+
+		ExplosaoMataObjetos_Barcos_Fim:
+			inc r2
+			dec r3
+			jnz ExplosaoMataObjetos_Barcos
 
 	pop r6
 	pop r5
@@ -1543,6 +1616,469 @@ ApagaTodosHelicopteros:
 	pop r1
 	pop r0
     rts
+
+; ======================
+; 	  Funções Barcos
+; ======================
+
+GeraBarcoAleatoriamente:
+	push r0
+	push r1
+	push r2
+	push r3
+	push r4
+	push r5
+	push r6
+
+	load r0, QuantidadeBarcos
+	loadn r1, #posBarcos
+	load r2, FlagMorto
+
+	GeraBarcoAleatoriamente_BuscaPosicao:
+		loadi r3, r1
+		cmp r3, r2
+		jeq GeraBarcoAleatoriamente_Cria
+
+		inc r1
+		dec r0
+		jnz GeraBarcoAleatoriamente_BuscaPosicao
+
+	; Chegou aqui então não tem posição livre
+	jmp GeraBarcoAleatoriamente_Fim
+
+	GeraBarcoAleatoriamente_Cria:
+		call PegaNumeroAleatorio	; numero aleatorio em r7
+
+		loadn r3, #2
+		mod r3, r1, r3 				; barcos pares nascem na esquerda
+									; barcos impares nascem na direita
+		jnz GeraBarcoAleatoriamente_Cria_Direita
+
+		GeraBarcoAleatoriamente_Cria_Esquerda:
+			loadn r2, #12
+			jmp GeraBarcoAleatoriamente_Cria_Salva
+		GeraBarcoAleatoriamente_Cria_Direita:
+			loadn r2, #26
+
+		GeraBarcoAleatoriamente_Cria_Salva:
+			storei r1, r2
+
+	GeraBarcoAleatoriamente_Fim:
+		pop r6
+		pop r5
+		pop r4
+		pop r3
+		pop r2
+		pop r1
+		pop r0
+	    rts
+
+DesenhaTodosBarcos:
+	push r0
+	push r1
+	push r2
+	push r3
+	push r4
+	push r5
+	push r6
+
+	load r0, QuantidadeBarcos
+	loadn r1, #posBarcos
+
+	DesenhaTodosBarcos_Loop1:
+		loadi r2, r1
+		load r3, FlagMorto
+		cmp r2, r3
+		jeq DesenhaTodosBarcos_Loop1_Fim
+
+		; COMENTÁRIO
+		; Essa parte ta zero generalista, mas
+		; acho que desse jeito fica bem mais
+		; simples, zero necessidade de fazer
+		; um outro loop
+
+		loadn r3, #CorpoBarcoCaracteres	; carrega o caracter
+		loadi r4, r3
+		outchar r4, r2
+		inc r2							; posicao do lado
+		inc r3 							; proximo caracter
+		loadi r4, r3
+		outchar r4, r2
+
+		DesenhaTodosBarcos_Loop1_Fim:
+			inc r1
+			dec r0
+			jnz DesenhaTodosBarcos_Loop1
+
+	pop r6
+	pop r5
+	pop r4
+	pop r3
+	pop r2
+	pop r1
+	pop r0
+    rts
+
+ApagaTodosBarcos:
+	push r0
+	push r1
+	push r2
+	push r3
+	push r4
+	push r5
+	push r6
+
+	load r0, QuantidadeBarcos
+	loadn r1, #posBarcos
+
+	ApagaTodosBarcos_Loop1:
+		loadi r2, r1
+		load r3, FlagMorto
+		cmp r2, r3
+		jeq ApagaTodosBarcos_Loop1_Fim
+
+		loadn r3, #' '
+		outchar r3, r2
+		inc r2							; posicao do lado
+		outchar r3, r2
+
+		ApagaTodosBarcos_Loop1_Fim:
+			inc r1
+			dec r0
+			jnz ApagaTodosBarcos_Loop1
+
+	pop r6
+	pop r5
+	pop r4
+	pop r3
+	pop r2
+	pop r1
+	pop r0
+    rts
+
+MovimentaTodosBarcosVertical:
+	push r0
+	push r1
+	push r2
+	push r3
+	push r4
+	push r5
+	push r6
+
+	call ApagaTodosBarcos
+
+	load r0, QuantidadeBarcos
+	loadn r1, #posBarcos
+	MovimentaTodosBarcosVertical_Loop:
+		loadi r2, r1
+		load r3, FlagMorto
+		cmp r2, r3
+		jeq MovimentaTodosBarcosVertical_Loop_Fim
+
+		loadn r3, #40 		; tamanho da linha
+		add r2, r2, r3
+
+		; Checa se o barco passou do limite vertical
+		; se passou mata ele
+
+		div r3, r2, r3 		; ve em que linha esta
+		loadn r4, #26 		; limite vertical
+		cmp r3, r4
+		jgr MovimentaTodosBarcosVertical_Loop_Mata
+
+		storei r1, r2
+
+		jmp MovimentaTodosBarcosVertical_Loop_Fim
+
+		MovimentaTodosBarcosVertical_Loop_Mata:
+			load r3, FlagMorto
+			storei r1, r3
+		MovimentaTodosBarcosVertical_Loop_Fim:
+			inc r1
+			dec r0
+			jnz MovimentaTodosBarcosVertical_Loop
+
+	pop r6
+	pop r5
+	pop r4
+	pop r3
+	pop r2
+	pop r1
+	pop r0
+    rts
+
+MovimentaTodosBarcosHorizontal:
+	push r0
+	push r1
+	push r2
+	push r3
+	push r4
+	push r5
+	push r6
+
+	loadn r0, #posBarcos
+	load r1, QuantidadeBarcos
+	MovimentaTodosBarcosHorizontal_Loop:
+		loadi r2, r0
+		load r3, FlagMorto
+		cmp r2, r3
+		jeq MovimentaTodosBarcosHorizontal_Loop_Fim
+
+		loadn r3, #40
+		div r3, r2, r3 		; calcula a linha que o barco está
+		loadn r4, #15 		; começa a andar a partir da linha 15
+		cmp r3, r4
+		jle MovimentaTodosBarcosHorizontal_Loop_Fim
+
+		loadn r3, #2 		; barcos pares andam para direita
+		mod r3, r0, r3
+		jz MovimentaTodosBarcosHorizontal_Loop_Direita
+
+		MovimentaTodosBarcosHorizontal_Loop_Esquerda:
+			dec r2			; anda para esquerda
+			loadn r3, #40
+			mod r3, r2, r3 	; calcula o x do barco
+			loadn r4, #12 	; limite a esquerda
+			cmp r3, r4
+			jgr MovimentaTodosBarcosHorizontal_Loop_Salva
+			jmp MovimentaTodosBarcosHorizontal_Loop_Fim
+
+		MovimentaTodosBarcosHorizontal_Loop_Direita:
+			inc r2			; anda para direita
+			loadn r3, #40
+			mod r3, r2, r3 	; calcula o x do barco
+			loadn r4, #26 	; limite a direita
+			cmp r3, r4
+			jle MovimentaTodosBarcosHorizontal_Loop_Salva
+			jmp MovimentaTodosBarcosHorizontal_Loop_Fim
+
+		MovimentaTodosBarcosHorizontal_Loop_Salva:
+			;	Ver com o simões isso aqui
+			;	parece que eu compliquei
+			; 	mais do que precisa
+
+			;	push r0
+			;	mov r0, r2
+			;	call PosicaoEstaLivre
+			;	pop r0
+			;	loadn r3, #1 	; no r7 tem o retorno da subrotina
+			;	cmp r3, r7		; se a posicao ta ocupada, ele não se move!
+			;	jeq MovimentaTodosBarcosHorizontal_Loop_Fim
+
+			storei r0, r2
+		MovimentaTodosBarcosHorizontal_Loop_Fim:
+			inc r0
+			dec r1
+			jnz MovimentaTodosBarcosHorizontal_Loop
+
+	pop r6
+	pop r5
+	pop r4
+	pop r3
+	pop r2
+	pop r1
+	pop r0
+    rts
+
+; r0 = endereço do barco em questão
+MataBarco:
+	push r0
+	push r1
+	push r2
+	push r3
+	push r4
+	push r5
+	push r6
+
+	; apagar todos os barcos antes de eu perder
+	; a posição desse barco
+	call ApagaTodosBarcos
+
+	load r1, FlagMorto
+	storei r0, r1
+
+	pop r6
+	pop r5
+	pop r4
+	pop r3
+	pop r2
+	pop r1
+	pop r0
+    rts
+
+ChecaColisaoTodosBarcos:
+	push r0
+	push r1
+	push r2
+	push r3
+	push r4
+	push r5
+	push r6
+
+	load r0, QuantidadeBarcos
+	loadn r1, #posBarcos
+
+	ChecaColisaoTodosBarcos_Loop1:
+		loadi r2, r1
+		load r3, FlagMorto
+		cmp r2, r3
+		jeq ChecaColisaoTodosBarcos_Loop1_Fim
+
+		loadn r3, #CorpoNave
+		load r4, TamanhoCorpoNave
+
+		ChecaColisaoTodosBarcos_Loop2:
+			load r5, posNave
+			loadi r6, r3
+			add r5, r5, r6
+
+			cmp r5, r2
+			jeq GameOver 	; bateu a parte esquerda do barco
+			inc r2
+			cmp r5, r2
+			jeq GameOver 	; bateu a parte direita do barco
+
+			dec r2 			; restaura o r2 para o próximo loop
+
+			inc r3
+			dec r4
+			jnz ChecaColisaoTodosBarcos_Loop2
+
+		ChecaColisaoTodosBarcos_Loop1_Fim:
+			inc r1
+			dec r0
+			jnz ChecaColisaoTodosBarcos_Loop1
+
+	pop r6
+	pop r5
+	pop r4
+	pop r3
+	pop r2
+	pop r1
+	pop r0
+    rts
+
+; r0 = posicao do tiro em questao
+ChecaColisaoTiroBarcos:
+	push r0
+	push r1
+	push r2
+	push r3
+	push r4
+	push r5
+	push r6
+
+	loadn r7, #0
+
+	loadn r1, #posBarcos
+	load r2, QuantidadeBarcos
+	ChecaColisaoTiroBarcos_Loop:
+		loadi r3, r1
+		load r4, FlagMorto
+		cmp r3, r4
+		jeq ChecaColisaoTiroBarcos_Loop_Fim
+
+		cmp r3, r0					; parte esquerda
+		jeq ChecaColisaoTiroBarcos_Loop_Acertou
+		inc r3 						; incrementa para olhar a direita
+		cmp r3, r0
+		jeq ChecaColisaoTiroBarcos_Loop_Acertou
+
+		jmp ChecaColisaoTiroBarcos_Loop_Fim		; se não atingiu nenhuma das duas continue
+
+
+		ChecaColisaoTiroBarcos_Loop_Acertou:
+			push r0
+			mov r0, r1
+			call MataBarco
+			pop r0
+
+			loadn r7, #1 					; passa para a função que algum barco morreu
+			jmp ChecaColisaoTiroBarcos_Fim 	; não precisa continuar checando
+
+		ChecaColisaoTiroBarcos_Loop_Fim:
+			inc r1
+			dec r2
+			jnz ChecaColisaoTiroBarcos_Loop
+
+	ChecaColisaoTiroBarcos_Fim:
+		pop r6
+		pop r5
+		pop r4
+		pop r3
+		pop r2
+		pop r1
+		pop r0
+	    rts
+
+; r0 = posição aboluta a checar
+; r7 = retorno 0/1
+PosicaoEstaLivre:
+	push r0
+	push r1
+	push r2
+	push r3
+	push r4
+	push r5
+	push r6
+
+	loadn r7, #0
+
+	loadn r1, #posHelicopteros
+	load r2, QuantidadeHelicopteros
+	PosicaoEstaLivre_Helicopteros:
+		loadi r3, r1
+		load r4, FlagMorto
+		cmp r3, r4
+		jeq PosicaoEstaLivre_Helicopteros_Fim
+
+		loadn r4, #CorpoHelicoptero
+		load r5, QuantidadeHelicopteros
+		PosicaoEstaLivre_Helicopteros_Loop:
+			loadi r6, r4
+			add r6, r3, r6
+			cmp r0, r6
+			jeq PosicaoEstaLivre_Ocupada
+
+			inc r4
+			dec r5
+			jnz PosicaoEstaLivre_Helicopteros_Loop
+
+
+		PosicaoEstaLivre_Helicopteros_Fim:
+			inc r1
+			dec r2
+			jnz PosicaoEstaLivre_Helicopteros
+
+	loadn r1, #posCombustiveis
+	load r2, QuantidadeCombustiveis
+	PosicaoEstaLivre_Combustivel:
+		loadi r3, r1
+		load r4, FlagMorto
+		cmp r3, r4
+		jeq PosicaoEstaLivre_Combustivel_Fim
+
+		cmp r3, r0
+		jeq PosicaoEstaLivre_Ocupada
+
+		PosicaoEstaLivre_Combustivel_Fim:
+			inc r1
+			dec r2
+			jnz PosicaoEstaLivre_Combustivel
+
+	jmp PosicaoEstaLivre_Fim
+
+	PosicaoEstaLivre_Ocupada:
+		loadn r7, #1
+	PosicaoEstaLivre_Fim:
+		pop r6
+		pop r5
+		pop r4
+		pop r3
+		pop r2
+		pop r1
+		pop r0
+	    rts
 
 Delay:
     push r0
