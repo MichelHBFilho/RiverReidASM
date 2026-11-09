@@ -6,6 +6,7 @@ jmp main
 	combustivelTexto: string "FUEL:"
 	gameOverTexto: string "GAMEOVER"
 	reiniciarTexto: string "APERTE R PARA REINICIAR"
+	scoreTexto: string "SCORE: "
 ; ======================
 ;     Variaveis Nave
 ; ======================
@@ -84,6 +85,17 @@ jmp main
 ; ======================
     FlagMorto: var #1
         static FlagMorto + #0, #2000
+    SCORE: var #1
+    CoresScore: var #5
+		static CoresScore + #0, #3072		; azul
+		static CoresScore + #1, #3584		; aqua
+		static CoresScore + #2, #2560		; verde claro
+		static CoresScore + #3, #2816		; amarelo
+		static CoresScore + #4, #2304		; vermelho
+	ScoreHelicoptero: var #1
+		static ScoreHelicoptero + #0, #5 
+	ScoreBarco: var #1
+		static ScoreBarco + #0, #5
 
 
 contadorFrames: var #1						; Conta frames para operar
@@ -125,6 +137,7 @@ main:
 	call ApagaTela
     call ResetaVariaveis
     call DesenhaCenario
+    call DesenhaScore
 
 	mainLoop:
 		call Desenha
@@ -204,6 +217,7 @@ ResetaVariaveis:
 	loadn r0, #0
 	store ContadorAleatorio, r0
 	store contadorFrames, r0
+	store SCORE, r0
 
 	rts
 
@@ -362,6 +376,73 @@ GeraObjetosAleatoriamente:
 	pop r1
 	pop r0
 	rts
+
+; r0 = Quantidade de score
+AumentaScore:
+	push r0
+	push r1
+
+	load r1, SCORE
+	add r1, r1, r0
+	store SCORE, r1
+
+	call DesenhaScore
+
+	pop r1
+	pop r0
+	rts
+
+; r7 = cor retorno
+PegaCorScore:
+	push r0
+	push r1
+
+	load r0, SCORE
+	loadn r1, #50
+	div r0, r0, r1			; nivel = SCORE / r1
+
+	loadn r1, #4			; ultimo indice da tabela
+	cmp r0, r1
+	jle PegaCorScore_Busca
+	mov r0, r1			; passou do limite, fica no vermelho
+
+	PegaCorScore_Busca:
+		loadn r1, #CoresScore
+		add r1, r1, r0
+		loadi r7, r1
+
+	pop r1
+	pop r0
+	rts
+
+DesenhaScore:
+	push r0
+	push r1
+	push r2
+	push r3
+	push r4
+	push r5
+	push r6
+
+	call PegaCorScore
+	mov r2, r7	; r2 é usado no imprime str
+
+	loadn r0, #1120 			; Pos primeiro caracter
+	loadn r1, #scoreTexto		; "SCORE:" Vai até a posição 1127
+	call ImprimeStr
+	loadn r0, #1128
+	load r1, SCORE
+	call ImprimeNumero
+
+	pop r6
+	pop r5
+	pop r4
+	pop r3
+	pop r2
+	pop r1
+	pop r0
+	rts
+
 
 ; ======================
 ; 	   Funções Nave
@@ -1114,12 +1195,12 @@ ChecaColisaoTiroHelicopteros:
     jmp ChecaColisaoTiroHelicopteros_Loop_Fim
 
 	ChecaColisaoTiroHelicopteros_Loop_Matou:
-	    loadn r7, #1
-
 		push r0
 		mov r0, r1
 		call MataHelicoptero
 	    pop r0
+
+	    loadn r7, #1
 
 	ChecaColisaoTiroHelicopteros_Loop_Fim:
 	    inc r1
@@ -1456,6 +1537,9 @@ MataHelicoptero:
 
 	load r1, FlagMorto
 	storei r0, r1
+
+	load r0, ScoreHelicoptero 		; pontuacao por matar helicoptero
+	call AumentaScore
 
 	pop r6
 	pop r5
@@ -1911,6 +1995,9 @@ MataBarco:
 	load r1, FlagMorto
 	storei r0, r1
 
+	load r0, ScoreBarco
+	call AumentaScore
+
 	pop r6
 	pop r5
 	pop r4
@@ -2143,6 +2230,51 @@ ImprimeStr:
 
    ImprimeStr_Sai:
 	pop r6	; Resgata os valores dos registadores utilizados na Subrotina da Pilha
+	pop r5
+	pop r4
+	pop r3
+	pop r2
+	pop r1
+	pop r0
+	rts
+
+; r0 = posicao
+; r1 = numero
+; r2 = cor
+ImprimeNumero:
+	push r0
+	push r1
+	push r2
+	push r3
+	push r4
+	push r5
+	push r6
+
+	; os registradores são 16 bits
+	; então o limite é 65335, logo
+	; eu vou ir dividindo por 10^n
+	; e ir imprimindo
+
+	loadn r3, #5
+	loadn r4, #10000
+	ImprimeNumero_Loop:
+		div r5, r1, r4	; o numero r5 vai ser impresso
+		mod r1, r1, r4	; para o próximo loop
+
+		loadn r6, #'0'
+		add r5, r5, r6	; transforma em ASCII
+		add r5, r5, r2 	; coloca a cor
+
+		outchar r5, r0
+
+		loadn r6, #10
+		div r4, r4, r6
+
+		inc r0
+		dec r3
+		jnz ImprimeNumero_Loop
+
+	pop r6
 	pop r5
 	pop r4
 	pop r3
