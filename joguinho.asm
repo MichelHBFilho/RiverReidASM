@@ -1160,7 +1160,7 @@ ChecaColisaoTiroCombutiveis:
         jne ChecaColisaoTiroCombutiveis_Loop_Fim
 
         push r1
-        loadn r1, #2
+        loadn r1, #5 		; raio da explosao
         call ExplosaoMataObjetos
         pop r1
 
@@ -1294,14 +1294,28 @@ DentroDoRaio:
 	div r5, r7, r6	; y da segunda posicao
 	mod r4, r7, r6	; x da segunda posicao
 
-	; a cpu trabalha com complemento de 2
-	; então na hora de elevar ao quadrado
-	; nao vai mudar nada, por isso nao precisamos verificar
-	sub r6, r4, r2
-	sub r7, r5, r3
+	cmp r3, r5
+	jle DentroDoRaio_Y2Maior
 
-	DentroDoRaio_Calcula:	; r6 distancia dos x
-							; r7 distancia dos y
+	sub r6, r3, r5
+	jmp DentroDoRaio_X
+
+	DentroDoRaio_Y2Maior:
+		sub r6, r5, r3
+
+	DentroDoRaio_X:
+		cmp r2, r4
+		jle DentroDoRaio_X2Maior
+
+		sub r7, r2, r4
+
+		jmp DentroDoRaio_Calcula
+
+		DentroDoRaio_X2Maior:
+			sub r7, r4, r2
+
+	DentroDoRaio_Calcula:	; r6 distancia dos y
+							; r7 distancia dos x
 		mul r6, r6, r6		; r6 ao quadrado
 		mul r7, r7, r7		; r7 ao quadrado
 		mul r1, r1, r1		; raio ao quadrado
