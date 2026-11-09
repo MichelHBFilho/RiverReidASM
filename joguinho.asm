@@ -18,27 +18,32 @@ jmp main
 		static CorpoNave + #2, #40	; Corpo			[2] = 40
 		static CorpoNave + #3, #41	; Asa direita 	[3] = 41
 		static CorpoNave + #4, #80	; Bunda 		[4] = 80
-	CorpoNaveCaracteres: string "rtzmu"
-
+	CorpoNaveCaracteres: var #5
+		static CorpoNaveCaracteres + #0, #'r'	; r cabeça
+		static CorpoNaveCaracteres + #1, #'t'	; t asa esquerda
+		static CorpoNaveCaracteres + #2, #'z'	; z meio
+		static CorpoNaveCaracteres + #3, #'m'	; m asa direita
+		static CorpoNaveCaracteres + #4, #'u'	; u bunda
     posNave: var #1
-
 	combustivelNave: var #1 		; 0-30
-
+; ======================
+; Variaveis Combustível
+; ======================
 	; Três combustiveis ao maximo na tela ao mesmo tempo
 	CombustivelObjetoCaracter: var #1
 		static CombustivelObjetoCaracter + #0, #2918    ; f amarelo
 	CorpoCombustivelObjeto: var #1
 		static CorpoCombustivelObjeto + #0, #0
-
     QuantidadeCombustiveis: var #1
         static QuantidadeCombustiveis + #0, #3
 	posCombustiveis: var #3
-
+; ======================
+;    Variaveis Tiros
+; ======================
 	; 3 tiros ao mesmo tempo na tela parece razoavel
 	QuantidadeTiros: var #1
 	    static QuantidadeTiros + #0, #3
 	posTiros: var #3
-
 	CorpoTiroCaracter: var #1
 		static CorpoTiroCaracter + #0, #2409            ; i vermelho claro
 ; ======================
@@ -52,10 +57,11 @@ jmp main
 		static CorpoHelicoptero + #1, #1	; Sup Direita	[1] = 39
 		static CorpoHelicoptero + #2, #41	; Inf Direita	[2] = 40
 		static CorpoHelicoptero + #3, #40	; Inf Esquerda 	[3] = 41
-	CorpoHelicopteroCaracters: string "nold"
-
-	; Guarda a posição de  5 helicopteros
-	; 2000 -> Objeto Morto
+	CorpoHelicopteroCaracters: var #4
+		static CorpoHelicopteroCaracters + #0, #'n'	; n Sup Esquerda
+		static CorpoHelicopteroCaracters + #1, #'o'	; o Sup Direita
+		static CorpoHelicopteroCaracters + #2, #'l'	; l Inf Direita
+		static CorpoHelicopteroCaracters + #3, #'d'	; d Inf Esquerda
     QuantidadeHelicopteros: var #1
 	    static QuantidadeHelicopteros + #0, #5
 	posHelicopteros: var #5
