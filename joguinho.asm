@@ -245,6 +245,8 @@ GameOver:
 
 	call ApagaTela				; apaga toda tela
 
+	call DesenhaScore
+
 	loadn r0, #616
 	loadn r1, #gameOverTexto
 	loadn r2, #0
@@ -322,21 +324,25 @@ Movimenta:
 	call MovimentaNave
 	call MovimentaTodosTiros
 
-	loadn r0, #50 			; os demais objetos se movimentam a cada 50 ciclos
-	load r1, contadorFrames
-	mod r0, r1, r0
-	jnz Movimenta_Fim
+	; helicopteros andam a cada 10 frames
+	load r0, contadorFrames
+	loadn r1, #10
+	mod r1, r0, r1
+	cz MovimentaTodosHelicopteros
 
-	call MovimentaTodosHelicopteros
-	call MovimentaTodosObjetoCombustivel
+	; barcos horizontal andam a cada 20 frames
+	loadn r1, #20
+	mod r1, r0, r1
+	cz MovimentaTodosBarcosHorizontal
 
-	; como o movimenta barco tem dois componentes
-	; eu optei por deixar a checagem de colisao aqui
-	; em vez de dentro das funções, porque desse jeito
-	; ele calcula só uma vez
-	call MovimentaTodosBarcosVertical
-	call MovimentaTodosBarcosHorizontal
-	call ChecaColisaoTodosBarcos
+	; barcos (verticalmente) e combustiveis andam a cada 50 frames
+	loadn r1, #50
+	mod r1, r0, r1
+	cz MovimentaTodosBarcosVertical
+
+	loadn r1, #50
+	mod r1, r0, r1
+	cz MovimentaTodosObjetoCombustivel
 
 	Movimenta_Fim:
 		pop r6
@@ -358,13 +364,13 @@ GeraObjetosAleatoriamente:
 	push r6
 
 	load r0, contadorFrames
-	loadn r1, #100
+	loadn r1, #500
 	mod r2, r0, r1
 	cz GeraObjetoCombustivelAleatoriamente
-	loadn r1, #150
+	loadn r1, #50
 	mod r2, r0, r1
 	cz GeraHelicopteroAleatoriamente
-	loadn r1, #200
+	loadn r1, #150
 	mod r2, r0, r1
 	cz GeraBarcoAleatoriamente
 
@@ -1896,6 +1902,8 @@ MovimentaTodosBarcosVertical:
 			dec r0
 			jnz MovimentaTodosBarcosVertical_Loop
 
+	call ChecaColisaoTodosBarcos
+
 	pop r6
 	pop r5
 	pop r4
@@ -1913,6 +1921,8 @@ MovimentaTodosBarcosHorizontal:
 	push r4
 	push r5
 	push r6
+
+	call ApagaTodosBarcos
 
 	loadn r0, #posBarcos
 	load r1, QuantidadeBarcos
@@ -1968,6 +1978,8 @@ MovimentaTodosBarcosHorizontal:
 			inc r0
 			dec r1
 			jnz MovimentaTodosBarcosHorizontal_Loop
+
+	call ChecaColisaoTodosBarcos
 
 	pop r6
 	pop r5
@@ -2332,7 +2344,7 @@ DesenhaCenario:
         dec r2
         jnz DesenhaCenario_Loop1
 
-    loadn r1, #29        ; pos inicial
+    loadn r1, #28        ; pos inicial
 	loadn r2, #28       ; ultima linha
 	loadn r4, #0        ; linha atual
 
