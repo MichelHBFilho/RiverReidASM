@@ -75,8 +75,8 @@ jmp main
 		static CorpoBarco + #0, #0
 		static CorpoBarco + #1, #1
 	CorpoBarcoCaracteres: var #2
-		static CorpoBarcoCaracteres + #0, #'B'
-		static CorpoBarcoCaracteres + #1, #'B'
+		static CorpoBarcoCaracteres + #0, #'j'
+		static CorpoBarcoCaracteres + #1, #'k'
 	QuantidadeBarcos: var #1
 		static QuantidadeBarcos + #0, #4
 	posBarcos: var #4
