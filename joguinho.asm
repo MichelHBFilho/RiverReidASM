@@ -150,10 +150,14 @@ main:
 
     halt
 
-; retorna no r7 um número aleatorio
+; ========== PegaNumeroAleatorio ==========
+;  	Pega um número do vetor RAND
+;	Incrementa o contador aleatório
+;	Retorna o número aleatório no r7
+; =========================================
 PegaNumeroAleatorio:
-	push r0
-	push r1
+	push r0	; guarda o contador aleatório que vai iterando pelos números
+	push r1	; guarda o endereço do número a ser resgatado
 
 	load r0, ContadorAleatorio
 	loadn r1, #RAND
@@ -171,6 +175,11 @@ PegaNumeroAleatorio:
 	pop r0
 	rts
 
+; ============ ResetaVariaveis ============
+;	Reseta todas as variavéis do programa
+; 	Utilizada pela main para não dar pro-
+;	blemas de persistência após reset.
+; =========================================
 ResetaVariaveis:
     loadn r0, #1020             ; linha 25, coluna 20
     store posNave, r0
@@ -221,6 +230,11 @@ ResetaVariaveis:
 
 	rts
 
+; ======= IncrementaContadorFrames ========
+;	Incrementa o contador de frames, que
+;	serve de guia para as movimentações do
+;	jogo, chamado pela main no fim do loop
+; =========================================
 IncrementaContadorFrames:
 	push r0
 
@@ -231,6 +245,11 @@ IncrementaContadorFrames:
 	pop r0
     rts
 
+; =============== GameOver ================
+;	Chamada sempre que o jogador morrer
+;	Ela reseta o stack pointer! 
+; 	Jogador saí daqui ao apertar 'r'
+; =========================================
 GameOver:
 
 	; RESETA o Stack Pointer
@@ -266,6 +285,10 @@ GameOver:
 
 	; Não passa por aqui!
 
+; ================ Desenha ================
+;	Desenha todos objetos na tela, chamando
+;	as respectivas subrotinas
+; =========================================
 Desenha:
 	push r0
 	push r1
@@ -290,6 +313,13 @@ Desenha:
 	pop r0
 	rts
 
+; ================= Apaga =================
+;	Apaga os objetos da tela, chamando as
+;	respectivas subrotinas.
+;	Não está sendo utilizada! Pois, estamos
+;	Apagando os objetos ao move-los
+;	para evitar flickering
+; =========================================
 Apaga:
 	push r0
 	push r1
@@ -312,14 +342,19 @@ Apaga:
 	pop r0
 	rts
 
+; ================ Movimenta ===============
+;	Movimenta todos os objetos na tela,
+;	chamando as respectivas subrotinas.
+;	A função movimenta mapeia de quanto em
+;	quanto tempo os objetos movem!
+;	Utiliza contadorFrames para tanto.
+;	
+;	if(contadorFrames % tempo == 0)
+;		movimentar();
+; =========================================
 Movimenta:
-	push r0
-	push r1
-	push r2
-	push r3
-	push r4
-	push r5
-	push r6
+	push r0	; Contador frames atual
+	push r1	; Tempos de movimentação de cada objeto
 
 	call MovimentaNave
 	call MovimentaTodosTiros
@@ -345,23 +380,22 @@ Movimenta:
 	cz MovimentaTodosObjetoCombustivel
 
 	Movimenta_Fim:
-		pop r6
-		pop r5
-		pop r4
-		pop r3
-		pop r2
 		pop r1
 		pop r0
 		rts
 
+; ======== GeraObjetosAleatoriamente ======
+;	Gera todos os objetos na tela, chamando
+;	as respectivas subrotinas. Assim como a
+;	movimenta se baseia no contador frames,
+; 	com a mesma lógica.
+;
+;	if(contadorFrames % tempo == 0)
+;		gerar();
+; =========================================
 GeraObjetosAleatoriamente:
-	push r0
-	push r1
-	push r2
-	push r3
-	push r4
-	push r5
-	push r6
+	push r0	; contador frames atual
+	push r1	; tempo de cada geração
 
 	load r0, contadorFrames
 	loadn r1, #500
@@ -374,19 +408,18 @@ GeraObjetosAleatoriamente:
 	mod r2, r0, r1
 	cz GeraBarcoAleatoriamente
 
-	pop r6
-	pop r5
-	pop r4
-	pop r3
-	pop r2
 	pop r1
 	pop r0
 	rts
 
-; r0 = Quantidade de score
+; ============== AumentaScore =============
+;	Aumenta o score do jogador, que está
+;	na variável SCORE.
+;	r0 -> parâmetro quantidade de score
+; =========================================
 AumentaScore:
-	push r0
-	push r1
+	push r0	; quantidade de score
+	push r1	; score atual
 
 	load r1, SCORE
 	add r1, r1, r0
@@ -1147,10 +1180,10 @@ ChecaColisaoTodosTiros:
         load r2, FlagMorto
         storei r0, r2
 
-		ChecaColisaoTodosTiros_Loop_Fim:
-		  inc r0
-			dec r1
-			jnz ChecaColisaoTodosTiros_Loop
+	ChecaColisaoTodosTiros_Loop_Fim:
+	 	inc r0
+		dec r1
+		jnz ChecaColisaoTodosTiros_Loop
 
     pop r6
 	pop r5
