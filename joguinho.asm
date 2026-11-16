@@ -986,18 +986,19 @@ ChecaColisaoTodosObjetoCombustivel:
     	rts
 
 
-; ==================
-; 	FUNÇÕES ATIRAR
-; ==================
-
+; ================= Atirar ================
+;	Cria um novo tiro na primeira posição
+;	livre do vetor de tiros, se houver.
+;	O tiro criado surge em cima da cabeça
+;	da nave.
+; =========================================
 Atirar:
-	push r0
-	push r1
-	push r2
-	push r3
-	push r4
-	push r5
-	push r6
+	push r0	; pos do novo tiro (posNave - 40)
+	push r1 ; auxiliar
+	push r2 ; Flag morto
+	push r3 ; limite do vetor de tiros
+	push r4 ; vetor de posição tiros
+	push r5 ; valor do vetor
 
 	load r0, posNave		; o tiro nasce uma linha acima da nave
 	loadn r1, #40
@@ -1008,9 +1009,9 @@ Atirar:
 	loadn r4, #posTiros
 
 	Atirar_ProcuraPosicaoLivre:
-		loadi r5, r4
-		cmp r5, r2
-		jeq Atirar_Salvar
+		loadi r5, r4		
+		cmp r5, r2 			; checa se está morto
+		jeq Atirar_Salvar	; se esta morto cria o tiro
 
 		inc r4
 		dec r3
@@ -1022,7 +1023,6 @@ Atirar:
 		storei r4, r0
 
     Atirar_Fim:
-    	pop r6
     	pop r5
     	pop r4
     	pop r3
@@ -1031,34 +1031,35 @@ Atirar:
     	pop r0
     	rts
 
+; ========== DesenhaTodosTiros ============
+;	Desenha todos os objetos de tiros,
+;	se o objeto guarda a FlagMorto, então
+;	não faz nada.
+; =========================================
 DesenhaTodosTiros:
-	push r0
-	push r1
-	push r2
-	push r3
-	push r4
-	push r5
-	push r6
+	push r0	; vetor de tiros
+	push r1	; caracter do tiro
+	push r2 ; limite do vetor
+	push r3 ; valor do vetor
+	push r4 ; FlagMorto
 
 	loadn r0, #posTiros
-	load r2, CorpoTiroCaracter
-	load r3, QuantidadeTiros
+	load r1, CorpoTiroCaracter
+	load r2, QuantidadeTiros
+	load r4, FlagMorto			
 	DesenhaTodosTiros_Loop:
-		loadi r4, r0
-		load r5, FlagMorto
-		cmp r4, r5
+		loadi r3, r0
+		cmp r3, r4
 		jeq DesenhaTodosTiros_Loop_Fim
 
-		outchar r2, r4
+		outchar r1, r3
 
 		DesenhaTodosTiros_Loop_Fim:
 			inc r0
-			dec r3
+			dec r2
 			jnz DesenhaTodosTiros_Loop
 
 	DesenhaTodosTiros_Fim:
-		pop r6
-		pop r5
 		pop r4
 		pop r3
 		pop r2
@@ -1066,36 +1067,37 @@ DesenhaTodosTiros:
 		pop r0
 		rts
 
+; =========== ApagaTodosTiros =============
+;	Apaga todos os tiros da tela, deve ser
+;	usado antes de movimentar e antes de
+;	matar o tiro.
+; =========================================
 ApagaTodosTiros:
-	push r0
-	push r1
-	push r2
-	push r3
-	push r4
-	push r5
-	push r6
+	push r0 ; vetor de tiros
+	push r1 ; espaço em branco
+	push r2 ; limite do vetor
+	push r3 ; valor do vetor
+	push r4 ; FlagMorto
 
 	loadn r0, #posTiros
 
-	loadn r2, #' '
-	load r3, QuantidadeTiros
+	loadn r1, #' '
+	load r2, QuantidadeTiros
+	load r4, FlagMorto
 
 	ApagaTodosTiros_Loop:
-		loadi r4, r0
-		load r5, FlagMorto
-		cmp r4, r5
+		loadi r3, r0
+		cmp r3, r4
 		jeq ApagaTodosTiros_Loop_Fim
 
-		outchar r2, r4
+		outchar r1, r3
 
 		ApagaTodosTiros_Loop_Fim:
 			inc r0
-			dec r3
+			dec r2
 			jnz ApagaTodosTiros_Loop
 
 	ApagaTodosTiros_Fim:
-		pop r6
-		pop r5
 		pop r4
 		pop r3
 		pop r2
@@ -1103,14 +1105,17 @@ ApagaTodosTiros:
 		pop r0
 		rts
 
+; ========= MovimentaTodosTiros ===========
+;	Movimenta todos os tiros na tela para
+;	cima. Antes de movimentar chama a sub-
+;	rotina de apagar os tiros.
+; =========================================
 MovimentaTodosTiros:
-	push r0
-	push r1
-	push r2
-	push r3
-	push r4
-	push r5
-	push r6
+	push r0 ; vetor de tiros
+	push r1 ; flag de morto
+	push r2 ; limite do vetor
+	push r3 ; valor do r0
+	push r4 ; temporario (tamanho da linha -> limite vertical)
 
 	call ApagaTodosTiros
 
@@ -1148,8 +1153,6 @@ MovimentaTodosTiros:
 	call ChecaColisaoTodosTiros
 
 	MovimentaTodosTiros_Fim:
-		pop r6
-		pop r5
 		pop r4
 		pop r3
 		pop r2
@@ -1157,14 +1160,24 @@ MovimentaTodosTiros:
 		pop r0
 		rts
 
+; ======== ChecaColisaoTodosTiros =========
+;	Verifica colisão de todos os tiros com
+;	os helicopteros, com os barcos e com os
+;	objeto combustivel, chamando as respec-
+;	tivas subrotinas.
+;
+;	Cada subrotina devolve no r7 se houve
+;	ou não colisão. Então, nessa subrotina
+;	matamos o tiro que acertou. 
+;	
+;	OBS: Um tiro não mata dois objetos.
+; =========================================
 ChecaColisaoTodosTiros:
-    push r0
-	push r1
-	push r2
-	push r3
-	push r4
-	push r5
-	push r6
+    push r0 ; vetor de tiros
+	push r1 ; limite do vetor
+	push r2 ; valor do r0
+	push r3 ; flag morto
+	push r7 ; retorno das subrotinas
 
 	loadn r0, #posTiros
 	load r1, QuantidadeTiros
@@ -1176,9 +1189,9 @@ ChecaColisaoTodosTiros:
 		jeq ChecaColisaoTodosTiros_Loop_Fim
 
 		; CHECA COLISAO DO TIRO COM HELICOPTERO
-		push r0
-		mov r0, r2  	; r0 guarda a posicao do tiro em questao
-		call ChecaColisaoTiroHelicopteros
+		push r0 ; parametro da subrotina: posicao do tiro
+			mov r0, r2
+			call ChecaColisaoTiroHelicopteros
 		pop r0
 
 		; se o retorno da funcao for 1, significa
@@ -1190,8 +1203,8 @@ ChecaColisaoTodosTiros:
 
 		; CHECA COLISAO DO TIRO COM COMBUSTÍVEL
 		push r0
-		mov r0, r2
-		call ChecaColisaoTiroCombutiveis
+			mov r0, r2
+			call ChecaColisaoTiroCombutiveis
 		pop r0
 
 		cmp r7, r3
@@ -1199,8 +1212,8 @@ ChecaColisaoTodosTiros:
 
 		; CHECA COLISAO DO TIRO COM BARCO
 		push r0
-		mov r0, r2
-		call ChecaColisaoTiroBarcos
+			mov r0, r2
+			call ChecaColisaoTiroBarcos
 		pop r0
 
 		cmp r7, r3
@@ -1217,26 +1230,34 @@ ChecaColisaoTodosTiros:
 		dec r1
 		jnz ChecaColisaoTodosTiros_Loop
 
-    pop r6
-	pop r5
-	pop r4
+    pop r7
 	pop r3
 	pop r2
 	pop r1
 	pop r0
 	rts
 
-
-; r0 posicao do tiro atual
-; r7 retorna se matou algum helicoptero
+; ====== ChecaColisaoTiroHelicopteros ======
+;	Verifica a colisão de um tiro dado com
+;	todos os helicopteros.
+;
+;	PARÂMETRO: r0 -> posição de um tiro
+;	RETORNO: r7 -> true/false
+;
+;	OBS: Essa função pode ser utilizada
+;	para verificar se há um helicoptero
+;	em uma posição específica. Não é
+;	restrita só a tiros.
+; =========================================
 ChecaColisaoTiroHelicopteros:
-    push r0
-	push r1
-	push r2
-	push r3
-	push r4
-	push r5
-	push r6
+    push r0	; parametro de posicao a verificar
+	push r1 ; vetor helicopteros
+	push r2 ; limite do vetor
+	push r3 ; valor do r1
+	push r4 ; flag morto -> vetor corpo helicoptero
+	push r5 ; limite do vetor corpo helicoptero
+	push r6 ; valor do r4
+	; r7 -> retorno
 
 	loadn r7, #0        ; comeca com não
 
@@ -1266,9 +1287,9 @@ ChecaColisaoTiroHelicopteros:
     jmp ChecaColisaoTiroHelicopteros_Loop_Fim
 
 	ChecaColisaoTiroHelicopteros_Loop_Matou:
-		push r0
-		mov r0, r1
-		call MataHelicoptero
+		push r0	; parametro de endereço do helicoptero morto
+			mov r0, r1
+			call MataHelicoptero
 	    pop r0
 
 	    loadn r7, #1
@@ -1287,16 +1308,27 @@ ChecaColisaoTiroHelicopteros:
 	pop r0
 	rts
 
-; r0 - pos do tiro
-; r7 - retorno se algum morreu
+; ====== ChecaColisaoTiroCombutiveis =======
+;	Verifica a colisão de um tiro dado com
+;	todos os combustiveis. Se houver, então
+;	chama a subrotina de Explosão, para 
+; 	matar em um raio.
+;
+;	PARÂMETRO: r0 -> posição de um tiro
+;	RETORNO: r7 -> true/false
+;
+;	OBS: Essa função pode ser utilizada
+;	para verificar se há um combustivel
+;	em uma posição específica. Não é
+;	restrita só a tiros.
+; =========================================
 ChecaColisaoTiroCombutiveis:
-    push r0
-	push r1
-	push r2
-	push r3
-	push r4
-	push r5
-	push r6
+    push r0 ; parametro de posicao
+	push r1 ; vetor de combustiveis
+	push r2 ; limite do vetor
+	push r3 ; valor do r1
+	push r4 ; Flag de morto
+	; r7 : retorno
 
     loadn r7, #0
 
@@ -1311,14 +1343,16 @@ ChecaColisaoTiroCombutiveis:
         cmp r0, r3
         jne ChecaColisaoTiroCombutiveis_Loop_Fim
 
-        push r1
-        loadn r1, #5 		; raio da explosao
-        call ExplosaoMataObjetos
+        push r1 
+        	; r0 é o outro parametro que é a posicao inicial
+        	; já está!
+	        loadn r1, #5 		; raio da explosao
+	        call ExplosaoMataObjetos
         pop r1
 
-        push r0
-        mov r0, r1
-        call MataObjetoCombustivel
+        push r0 ; endereço do objeto combustivel
+	        mov r0, r1
+	        call MataObjetoCombustivel
         pop r0
 
         loadn r7, #1
@@ -1328,8 +1362,6 @@ ChecaColisaoTiroCombutiveis:
     		dec r2
     		jnz ChecaColisaoTiroCombutiveis_Loop
 
-    pop r6
-	pop r5
 	pop r4
 	pop r3
 	pop r2
@@ -1337,10 +1369,16 @@ ChecaColisaoTiroCombutiveis:
 	pop r0
 	rts
 
-; r0 = endereço do y
+; ========= MataObjetoCombustivel =========
+;	Mata um objeto combustivel. Antes de 
+;	matar ele apaga todos os objetos da
+;	tela.
+;
+;	PARÂMETRO: r0 -> endereço do objeto
+; =========================================
 MataObjetoCombustivel:
-	push r0
-	push r1
+	push r0 ; parametro endereço
+	push r1 ; flag morto
 
 	call ApagaTodosObjetoCombustivel
 
@@ -1352,16 +1390,24 @@ MataObjetoCombustivel:
 	rts
 
 
-; r0 = pos inicial
-; r1 = raio
+; =========== ExplosaoMataObjetos =========
+;	Mata todos os objetos no raio da
+;	explosão. Para isso, usa a subrotina
+;	auxiliar DentroDoRaio, que verifica
+;	se uma posicao está dentro ou fora
+;	de um circulo.
+;
+;	PARÂMETRO: r0 -> centro da explosao
+;	PARÂMETRO: r1 -> raio da explosao
+; =========================================
 ExplosaoMataObjetos:
-	push r0
-	push r1
-	push r2
-	push r3
-	push r4
-	push r5
-	push r6
+	push r0 ; parametro centro
+	push r1 ; parametro raio
+	push r2 ; vetores objetos
+	push r3 ; limites do vetores
+	push r4 ; valor dos vetores
+	push r5 ; flag morto -> comparação
+	push r7	; retorno da DentroDoRaio
 
 	loadn r2, #posHelicopteros
 	load r3, QuantidadeHelicopteros
@@ -1417,7 +1463,7 @@ ExplosaoMataObjetos:
 			dec r3
 			jnz ExplosaoMataObjetos_Barcos
 
-	pop r6
+	pop r7
 	pop r5
 	pop r4
 	pop r3
@@ -1426,25 +1472,32 @@ ExplosaoMataObjetos:
 	pop r0
 	rts
 
-; r0 = pos inicial
-; r1 = raio
-; r7 = segunda posicao
-; retorno 0/1 no r7
+; ============== DentroDoRaio =============
+;	Verifica se uma posição está dentro
+;	de um círculo dado. Por meio de um
+;	pitágoras.
+;
+;	PARÂMETRO: r0 -> centro do circulo
+;	PARÂMETRO: r1 -> raio do circulo
+;	PARÂMETRO: r7 -> posição
+;	RETORNO: r7 -> true/false
+; =========================================
 DentroDoRaio:
 	push r0
 	push r1
-	push r2
-	push r3
-	push r4
-	push r5
-	push r6
+	push r2 ; x da primeira posicao
+	push r3 ; y da primeira posicao
+	push r4 ; x da segunda posicao
+	push r5 ; y da segunda posicao
+	push r6 ; tamanho da linha -> |x1 - x2|
+	; r7: parâmetro -> |y1 - y2| -> retorno
 
 	loadn r6, #40
-	div r3, r0, r6	; y da primeira posicao
-	mod r2, r0, r6	; x da primeira posicao
+	div r3, r0, r6	
+	mod r2, r0, r6	
 
-	div r5, r7, r6	; y da segunda posicao
-	mod r4, r7, r6	; x da segunda posicao
+	div r5, r7, r6	
+	mod r4, r7, r6
 
 	cmp r3, r5
 	jle DentroDoRaio_Y2Maior
@@ -1494,19 +1547,17 @@ DentroDoRaio:
 		pop r0
 		rts
 
-
-; ======================
-;  Funções Helicopteros
-; ======================
-
+; ===== GeraHelicopteroAleatoriamente =====
+;	Gera um helicoptero na primeira posição
+;	livre do vetor de helicopteros. Se não
+;	houver, então não gera nada.
+; =========================================
 GeraHelicopteroAleatoriamente:
-	push r0
-	push r1
-	push r2
-	push r3
-	push r4
-	push r5
-	push r6
+	push r0 ; vetor de helicopteros
+	push r1	; limite do vetor
+	push r2 ; flag de morto
+	push r3 ; valor do vetor
+	push r7 ; numero aleatorio
 
 	loadn r0, #posHelicopteros
 	load r1, QuantidadeHelicopteros
@@ -1535,23 +1586,27 @@ GeraHelicopteroAleatoriamente:
 		storei r0, r2                       ; todo helicoptero começa na linha 0
 
 	GeraHelicopteroAleatoriamente_Fim:
-		pop r6
-		pop r5
-		pop r4
+		pop r7
 		pop r3
 		pop r2
 		pop r1
 		pop r0
 		rts
 
+; ======== DesenhaTodosHelicopteros =======
+;	Desenha todos os helicopteros na tela,
+;	se o helicoptero tiver a FlagMorto, não
+;	desenha nada.
+; =========================================
 DesenhaTodosHelicopteros:
-	push r0
-	push r1
-	push r2
-	push r3
-	push r4
-	push r5
-	push r6
+	push r0 ; vetor de helicopteros
+	push r1 ; limite do vetor
+	push r2 ; valor do vetor
+	push r3 ; flagmorto -> vetor corpo helicoptero
+	push r4 ; vetor caracteres
+	push r5 ; limite dos vetores de corpo
+	push r6 ; posicao relativa de uma parte do helicopter
+	push r7 ; caracter de uma parte do helicoptero
 
 	loadn r0, #posHelicopteros
 	load r1, QuantidadeHelicopteros
@@ -1583,6 +1638,7 @@ DesenhaTodosHelicopteros:
             dec r1
             jnz DesenhaTodosHelicopteros_Loop
 
+    pop r7
 	pop r6
 	pop r5
 	pop r4
@@ -1592,15 +1648,17 @@ DesenhaTodosHelicopteros:
 	pop r0
     rts
 
-; r0 endereco do helicoptero em questao
+; ============ MataHelicoptero ============
+;	Mata um helicoptero e soma os pontos
+;	dados por matar um helicoptero chamando
+;	a subrotina AumentaScore. Antes de
+;	matar, ele apaga todos os helicopteros.
+;
+;	PARÂMETRO: r0 -> endereço do heli.
+; =========================================
 MataHelicoptero:
-    push r0
-	push r1
-	push r2
-	push r3
-	push r4
-	push r5
-	push r6
+    push r0 ; parâmetro endereço do helicoptero a ser morto -> ScoreHelicoptero parametro de AumentaScore
+	push r1 ; FlagMorto
 
     ; apago todos os helicopteros da tela antes de perder a posicao dele
     ; os demais serao redesenhados naturalmente
@@ -1612,23 +1670,21 @@ MataHelicoptero:
 	load r0, ScoreHelicoptero 		; pontuacao por matar helicoptero
 	call AumentaScore
 
-	pop r6
-	pop r5
-	pop r4
-	pop r3
-	pop r2
 	pop r1
 	pop r0
     rts
 
+; ======= MovimentaTodosHelicopteros ======
+;	Movimenta todos os helicotperos para
+;	baixo. Antes de mover, apaga todos os
+;	helicopteros.
+; =========================================
 MovimentaTodosHelicopteros:
-	push r0
-	push r1
-	push r2
-	push r3
-	push r4
-	push r5
-	push r6
+	push r0 ; vetor de helicopteros
+	push r1 ; limite do vetor
+	push r2 ; valor do vetor
+	push r3 ; temporário (FlagMorto -> tamanho linha)
+	push r4 ; limite vertical
 
 	call ApagaTodosHelicopteros			; helicoptero vai mover, então apago ele
 
@@ -1636,24 +1692,24 @@ MovimentaTodosHelicopteros:
 	load r1, QuantidadeHelicopteros
 
 	MovimentaTodosHelicopteros_Loop:
-		loadi r3, r0
-        load r4, FlagMorto
-		cmp r3, r4
+		loadi r2, r0
+        load r3, FlagMorto
+		cmp r2, r3
 		jeq MovimentaTodosHelicopteros_Loop_Fim
 
-        loadn r4, #40
-        add r3, r3, r4  ; desce uma linha
+        loadn r3, #40
+        add r2, r2, r3  ; desce uma linha
 
         ; lembrar que o corpo do helicopter ocupa 4 quadrados
         ; então considerando a linha de combustivel não pode
         ; passar da linha 27, ou seja, posicao 1080
-        loadn r5, #1080 ; limite vertical
+        loadn r4, #1080 ; limite vertical
 
-		cmp r3, r5		; if(helicoptero passou limites) matar()
+		cmp r2, r4		; if(helicoptero passou limites) matar()
 		jgr MovimentaTodosHelicopteros_Loop_Matar
 
 		MovimentaTodosHelicopteros_Loop_Salvar:
-			storei r0, r3
+			storei r0, r2
             jmp MovimentaTodosHelicopteros_Loop_Fim
 
 		MovimentaTodosHelicopteros_Loop_Matar:
@@ -1668,8 +1724,6 @@ MovimentaTodosHelicopteros:
 	call ChecaColisaoTodosHelicopteros
 
 	MovimentaTodosHelicopteros_Fim:
-		pop r6
-		pop r5
 		pop r4
 		pop r3
 		pop r2
@@ -1677,14 +1731,23 @@ MovimentaTodosHelicopteros:
 		pop r0
 		rts
 
+; ===== ChecaColisaoTodosHelicopteros =====
+;	Checa colisão da nave com cada um dos
+;	helicopteros em todo o corpo. Se houver
+;	colisão chama GameOver.
+;
+;	NOTA: O uso de registradores aqui está
+;	porco, pois não consegui evitar o spill
+; =========================================
 ChecaColisaoTodosHelicopteros:
-	push r0
-	push r1
-	push r2
-	push r3
-	push r4
-	push r5
-	push r6
+	push r0 ; vetor de helicopteros <-> posição da nave
+	push r1 ; limite do vetor <-> posicao da nave + offset
+	push r2 ; posição de um helicoptero
+	push r3 ; FlagMorto -> vetor corpo helicoptero
+	push r4 ; limite do vetor corpo helicoptero
+	push r5 ; posição + offset
+	push r6 ; vetor corpo nave
+	push r7 ; limite do vetor corpo nave
 
     loadn r0, #posHelicopteros
     load r1, QuantidadeHelicopteros
@@ -1730,6 +1793,7 @@ ChecaColisaoTodosHelicopteros:
             dec r1
             jnz ChecaColisaoTodosHelicopteros_Loop
 
+    pop r7
 	pop r6
 	pop r5
 	pop r4
@@ -1739,14 +1803,17 @@ ChecaColisaoTodosHelicopteros:
 	pop r0
 	rts
 
+; ========= ApagaTodosHelicopteros ========
+;	Apaga todos os helicopteros da tela.
+; =========================================
 ApagaTodosHelicopteros:
-    push r0
-	push r1
-	push r2
-	push r3
-	push r4
-	push r5
-	push r6
+    push r0 ; vetor helicopteros
+	push r1 ; limite do vetor helicopteros 
+	push r2 ; valor da posição de um helicoptero
+	push r3 ; vetor corpo helicoptero
+	push r4 ; espaço branco
+	push r5 ; limite do vetor corpo helicoptero
+	push r6 ; posição + offset
 
 	loadn r0, #posHelicopteros
 	load r1, QuantidadeHelicopteros
@@ -1786,18 +1853,22 @@ ApagaTodosHelicopteros:
 	pop r0
     rts
 
-; ======================
-; 	  Funções Barcos
-; ======================
-
+; ========= GeraBarcoAleatoriamente =======
+;	Gera um barco na primeira posição livre
+;	não é aleatorio, pois segue a seguinte
+;	regra:
+;		- barcos em endereços pares nascem
+;			na esquerda
+;		- barcom em endereços impares
+;			na direita.
+;	Essa regra deixa o fluxo de movimento
+;	horizontal bem melhor de trabalhar.
+; =========================================
 GeraBarcoAleatoriamente:
-	push r0
-	push r1
-	push r2
-	push r3
-	push r4
-	push r5
-	push r6
+	push r0 ; limite do vetor
+	push r1 ; vetor de barcos
+	push r2 ; FlagMorto
+	push r3 ; valor de um barco
 
 	load r0, QuantidadeBarcos
 	loadn r1, #posBarcos
@@ -1833,23 +1904,22 @@ GeraBarcoAleatoriamente:
 			storei r1, r2
 
 	GeraBarcoAleatoriamente_Fim:
-		pop r6
-		pop r5
-		pop r4
 		pop r3
 		pop r2
 		pop r1
 		pop r0
 	    rts
 
+; ========= GeraBarcoAleatoriamente =======
+;	Desenha todos os barcos na tela, de um
+;	modo levemente porco.
+; =========================================
 DesenhaTodosBarcos:
-	push r0
-	push r1
-	push r2
-	push r3
-	push r4
-	push r5
-	push r6
+	push r0 ; limite do vetor barcos
+	push r1 ; vetor barcos
+	push r2 ; valor da posição do barco
+	push r3 ; FlagMorto -> caracteres do barco
+	push r4 ; caracter a imprimir
 
 	load r0, QuantidadeBarcos
 	loadn r1, #posBarcos
@@ -1879,8 +1949,6 @@ DesenhaTodosBarcos:
 			dec r0
 			jnz DesenhaTodosBarcos_Loop1
 
-	pop r6
-	pop r5
 	pop r4
 	pop r3
 	pop r2
@@ -1888,14 +1956,14 @@ DesenhaTodosBarcos:
 	pop r0
     rts
 
+; ========= GeraBarcoAleatoriamente =======
+;	Apaga todos os barcos da tela.
+; =========================================
 ApagaTodosBarcos:
-	push r0
-	push r1
-	push r2
-	push r3
-	push r4
-	push r5
-	push r6
+	push r0 ; limite do vetor barcos
+	push r1 ; vetor barcos
+	push r2 ; posicao de um barco do vetor
+	push r3 ; flagmorto -> espaço branco
 
 	load r0, QuantidadeBarcos
 	loadn r1, #posBarcos
@@ -1916,23 +1984,22 @@ ApagaTodosBarcos:
 			dec r0
 			jnz ApagaTodosBarcos_Loop1
 
-	pop r6
-	pop r5
-	pop r4
 	pop r3
 	pop r2
 	pop r1
 	pop r0
     rts
 
+; ====== MovimentaTodosBarcosVertical =====
+;	Movimenta todos os barcos uma linha
+;	para baixo. Antes de mover apaga todos.
+; =========================================
 MovimentaTodosBarcosVertical:
-	push r0
-	push r1
-	push r2
-	push r3
-	push r4
-	push r5
-	push r6
+	push r0 ; limite do vetor barcos
+	push r1 ; vetor barcos
+	push r2 ; posição de um barco
+	push r3 ; flagmorto	-> tamanho da linha -> y do barco
+	push r4 ; limite vertical
 
 	call ApagaTodosBarcos
 
@@ -1969,8 +2036,6 @@ MovimentaTodosBarcosVertical:
 
 	call ChecaColisaoTodosBarcos
 
-	pop r6
-	pop r5
 	pop r4
 	pop r3
 	pop r2
@@ -1978,14 +2043,21 @@ MovimentaTodosBarcosVertical:
 	pop r0
     rts
 
+; ===== MovimentaTodosBarcosHorizontal ====
+;	Movimenta todos os barcos um bloco para
+;	o lado. Seguindo a mesma regra de gera
+;	ção. Barcos pares andam para direita,
+;	barcos impares, para a esquerda.
+;
+;	NOTA: só movimenta barcos em baixo da
+;	linha quinze.
+; =========================================
 MovimentaTodosBarcosHorizontal:
-	push r0
-	push r1
-	push r2
-	push r3
-	push r4
-	push r5
-	push r6
+	push r0 ; vetor posição dos barcos
+	push r1 ; limite do vetor
+	push r2 ; valor da posição do barco
+	push r3 ; FlagMorto -> tamanho da linha -> linha do barco
+	push r4 ; temporario
 
 	call ApagaTodosBarcos
 
@@ -2046,8 +2118,6 @@ MovimentaTodosBarcosHorizontal:
 
 	call ChecaColisaoTodosBarcos
 
-	pop r6
-	pop r5
 	pop r4
 	pop r3
 	pop r2
@@ -2055,15 +2125,16 @@ MovimentaTodosBarcosHorizontal:
 	pop r0
     rts
 
-; r0 = endereço do barco em questão
+; =============== MataBarco ===============
+;	Mata um barco e concede ao jogador os
+;	pontos respectivos com a subrotina
+;	AumentaScore.
+;
+;	PARÂMETRO: r0 -> endereço do barco.
+; =========================================
 MataBarco:
-	push r0
-	push r1
-	push r2
-	push r3
-	push r4
-	push r5
-	push r6
+	push r0 ; parâmetro endereço do barco -> Score do barco
+	push r1 ; FlagMorto
 
 	; apagar todos os barcos antes de eu perder
 	; a posição desse barco
@@ -2075,23 +2146,23 @@ MataBarco:
 	load r0, ScoreBarco
 	call AumentaScore
 
-	pop r6
-	pop r5
-	pop r4
-	pop r3
-	pop r2
 	pop r1
 	pop r0
     rts
 
+; ======== ChecaColisaoTodosBarcos ========
+;	Checa a colisão de todos os barcos com
+;	a nave. Se houver colisão, chama o
+;	GameOver.
+; =========================================
 ChecaColisaoTodosBarcos:
-	push r0
-	push r1
-	push r2
-	push r3
-	push r4
-	push r5
-	push r6
+	push r0 ; limite do vetor barcos
+	push r1 ; vetor barcos
+	push r2 ; valor do vetor
+	push r3 ; FlagMorto -> vetor corpo nave
+	push r4 ; limite do vetor corpo nave
+	push r5 ; posição da nave
+	push r6 ; posição da nave + offset
 
 	load r0, QuantidadeBarcos
 	loadn r1, #posBarcos
@@ -2136,15 +2207,23 @@ ChecaColisaoTodosBarcos:
 	pop r0
     rts
 
-; r0 = posicao do tiro em questao
+; ========= ChecaColisaoTiroBarcos ========
+;	Checa a colisão de um tiro com todos os
+;	barcos. Assim como as outras de checar
+;	colisão com tiro, pode ser utilizada
+;	para verificar se tem um barco na
+;	posição. Se houver colisão, chama
+;	MataBarco
+;
+;	PARÂMETRO: r0 -> posição a checar.
+;	RETORNO: r7 -> true/false
+; =========================================
 ChecaColisaoTiroBarcos:
-	push r0
-	push r1
-	push r2
-	push r3
-	push r4
-	push r5
-	push r6
+	push r0 ; parâmetro posição
+	push r1 ; vetor posição barcos
+	push r2 ; limite do vetor
+	push r3 ; valor do vetor
+	push r4 ; FlagMorto
 
 	loadn r7, #0
 
@@ -2167,8 +2246,8 @@ ChecaColisaoTiroBarcos:
 
 		ChecaColisaoTiroBarcos_Loop_Acertou:
 			push r0
-			mov r0, r1
-			call MataBarco
+				mov r0, r1
+				call MataBarco
 			pop r0
 
 			loadn r7, #1 					; passa para a função que algum barco morreu
@@ -2180,8 +2259,6 @@ ChecaColisaoTiroBarcos:
 			jnz ChecaColisaoTiroBarcos_Loop
 
 	ChecaColisaoTiroBarcos_Fim:
-		pop r6
-		pop r5
 		pop r4
 		pop r3
 		pop r2
@@ -2189,78 +2266,17 @@ ChecaColisaoTiroBarcos:
 		pop r0
 	    rts
 
-; r0 = posição aboluta a checar
-; r7 = retorno 0/1
-PosicaoEstaLivre:
-	push r0
-	push r1
-	push r2
-	push r3
-	push r4
-	push r5
-	push r6
-
-	loadn r7, #0
-
-	loadn r1, #posHelicopteros
-	load r2, QuantidadeHelicopteros
-	PosicaoEstaLivre_Helicopteros:
-		loadi r3, r1
-		load r4, FlagMorto
-		cmp r3, r4
-		jeq PosicaoEstaLivre_Helicopteros_Fim
-
-		loadn r4, #CorpoHelicoptero
-		load r5, QuantidadeHelicopteros
-		PosicaoEstaLivre_Helicopteros_Loop:
-			loadi r6, r4
-			add r6, r3, r6
-			cmp r0, r6
-			jeq PosicaoEstaLivre_Ocupada
-
-			inc r4
-			dec r5
-			jnz PosicaoEstaLivre_Helicopteros_Loop
-
-
-		PosicaoEstaLivre_Helicopteros_Fim:
-			inc r1
-			dec r2
-			jnz PosicaoEstaLivre_Helicopteros
-
-	loadn r1, #posCombustiveis
-	load r2, QuantidadeCombustiveis
-	PosicaoEstaLivre_Combustivel:
-		loadi r3, r1
-		load r4, FlagMorto
-		cmp r3, r4
-		jeq PosicaoEstaLivre_Combustivel_Fim
-
-		cmp r3, r0
-		jeq PosicaoEstaLivre_Ocupada
-
-		PosicaoEstaLivre_Combustivel_Fim:
-			inc r1
-			dec r2
-			jnz PosicaoEstaLivre_Combustivel
-
-	jmp PosicaoEstaLivre_Fim
-
-	PosicaoEstaLivre_Ocupada:
-		loadn r7, #1
-	PosicaoEstaLivre_Fim:
-		pop r6
-		pop r5
-		pop r4
-		pop r3
-		pop r2
-		pop r1
-		pop r0
-	    rts
-
+; ================= Delay =================
+;	Faz um delay de alguns ciclos para
+;	manter a jogabilidade.
+;
+;	OBS: Se o jogo estiver muito rápido
+;	então, mudar os valores aqui. Isso
+;	depende de computador para computador.
+; =========================================
 Delay:
-    push r0
-    push r1
+    push r0 ; tamanho do loop longo
+    push r1 ; tamanho do loop curto
 
     loadn r0, #10
 Delay_Loop1:
@@ -2274,6 +2290,139 @@ Delay_Loop2:
     pop r1
     pop r0
     rts
+
+
+; ============= DesenhaCenario ============
+;	Desenha o cenário no jogo, com base em
+;	uma regra fixa:
+;		- grama da coluna 0-12 & 28-40
+;		- da linha 0 até 28.
+; =========================================
+DesenhaCenario:
+    push r0 ; caracter que representa a grama
+	push r1 ; posição inicial
+	push r2 ; linha limite
+	push r3 ; quantidade de colunas
+	push r4 ; linha atual
+	push r5 ; tamanho da linha
+
+	loadn r0, #2599     ; ' verde grama
+	loadn r1, #0        ; pos inicial
+	loadn r2, #28       ; ultima linha
+	loadn r4, #0        ; linha atual
+
+	DesenhaCenario_Loop1:
+	    inc r4
+	    loadn r3, #12   ; 12 colunas
+        DesenhaCenario_Loop1_Loop:
+    		outchar r0, r1
+            inc r1
+            dec r3
+            jnz DesenhaCenario_Loop1_Loop
+        loadn r5, #40
+        mul r1, r4, r5
+        dec r2
+        jnz DesenhaCenario_Loop1
+
+    loadn r1, #28        ; pos inicial
+	loadn r2, #28       ; ultima linha
+	loadn r4, #0        ; linha atual
+
+	DesenhaCenario_Loop2:
+	    inc r4
+	    loadn r3, #12   ; 12 colunas
+        DesenhaCenario_Loop2_Loop:
+    		outchar r0, r1
+            inc r1
+            dec r3
+            jnz DesenhaCenario_Loop2_Loop
+        loadn r5, #40
+        mul r1, r4, r5
+        loadn r5, #28
+        add r1, r1, r5
+        dec r2
+        jnz DesenhaCenario_Loop2
+
+	pop r5
+	pop r4
+	pop r3
+	pop r2
+	pop r1
+	pop r0
+    rts
+
+; r0 = posicao
+; r1 = numero
+; r2 = cor
+; ============== ImprimeNumero ============
+;	Imprime um número na tela.
+;
+;	PARÂMETRO: r0 -> posição inicial
+;	PARÂMETRO: r1 -> número a ser impresso
+;	PARÂMETRO: r2 -> cor para imprimir
+;
+;	RESULTADO: É o equivalente a um
+;		printf("%05d") -> 00245
+; =========================================
+ImprimeNumero:
+	push r0 ; posição inicial
+	push r1 ; número a ser impresso
+	push r2 ; cor 
+	push r3 ; quantidade de digitos decimais do registrador
+	push r4 ; 10^(5 - n)
+	push r5 ; 10
+	push r6 ; '0' para transformar em ASCII
+
+	; os registradores são 16 bits
+	; então o limite é 65335, logo
+	; eu vou ir dividindo por 10^n
+	; e ir imprimindo
+
+	loadn r3, #5
+	loadn r4, #10000
+	ImprimeNumero_Loop:
+		div r5, r1, r4	; o numero r5 vai ser impresso
+		mod r1, r1, r4	; para o próximo loop
+
+		loadn r6, #'0'
+		add r5, r5, r6	; transforma em ASCII
+		add r5, r5, r2 	; coloca a cor
+
+		outchar r5, r0
+
+		loadn r6, #10
+		div r4, r4, r6
+
+		inc r0
+		dec r3
+		jnz ImprimeNumero_Loop
+
+	pop r6
+	pop r5
+	pop r4
+	pop r3
+	pop r2
+	pop r1
+	pop r0
+	rts
+
+; ====== FUNÇÕES RETIRADAS DE OUTROS JOGOS DO REPOSITÓRIO ======
+
+ApagaTela:
+	push r0
+	push r1
+
+	loadn r0, #1200		; apaga as 1200 posicoes da Tela
+	loadn r1, #' '		; com "espaco"
+
+	   ApagaTela_Loop:	;;label for(r0=1200;r3>0;r3--)
+		dec r0
+		outchar r1, r0
+		jnz ApagaTela_Loop
+
+	pop r1
+	pop r0
+	rts
 
 ; imprime string do primeiro caracter até o \0
 ; r0 = posicao primeiro caracter
@@ -2314,128 +2463,6 @@ ImprimeStr:
 	pop r1
 	pop r0
 	rts
-
-; r0 = posicao
-; r1 = numero
-; r2 = cor
-ImprimeNumero:
-	push r0
-	push r1
-	push r2
-	push r3
-	push r4
-	push r5
-	push r6
-
-	; os registradores são 16 bits
-	; então o limite é 65335, logo
-	; eu vou ir dividindo por 10^n
-	; e ir imprimindo
-
-	loadn r3, #5
-	loadn r4, #10000
-	ImprimeNumero_Loop:
-		div r5, r1, r4	; o numero r5 vai ser impresso
-		mod r1, r1, r4	; para o próximo loop
-
-		loadn r6, #'0'
-		add r5, r5, r6	; transforma em ASCII
-		add r5, r5, r2 	; coloca a cor
-
-		outchar r5, r0
-
-		loadn r6, #10
-		div r4, r4, r6
-
-		inc r0
-		dec r3
-		jnz ImprimeNumero_Loop
-
-	pop r6
-	pop r5
-	pop r4
-	pop r3
-	pop r2
-	pop r1
-	pop r0
-	rts
-
-ApagaTela:
-	push r0
-	push r1
-
-	loadn r0, #1200		; apaga as 1200 posicoes da Tela
-	loadn r1, #' '		; com "espaco"
-
-	   ApagaTela_Loop:	;;label for(r0=1200;r3>0;r3--)
-		dec r0
-		outchar r1, r0
-		jnz ApagaTela_Loop
-
-	pop r1
-	pop r0
-	rts
-
-; ====================
-;       CENÁRIO
-; ====================
-
-; basicamente só desenha grama em toda tela da coluna 0 a 12
-; até a ultima linha que tem a resenha do combustivel
-DesenhaCenario:
-    push r0
-	push r1
-	push r2
-	push r3
-	push r4
-	push r5
-	push r6
-
-	loadn r0, #2599     ; ' verde grama
-	loadn r1, #0        ; pos inicial
-	loadn r2, #28       ; ultima linha
-	loadn r4, #0        ; linha atual
-
-	DesenhaCenario_Loop1:
-	    inc r4
-	    loadn r3, #12   ; 12 colunas
-        DesenhaCenario_Loop1_Loop:
-    		outchar r0, r1
-            inc r1
-            dec r3
-            jnz DesenhaCenario_Loop1_Loop
-        loadn r5, #40
-        mul r1, r4, r5
-        dec r2
-        jnz DesenhaCenario_Loop1
-
-    loadn r1, #28        ; pos inicial
-	loadn r2, #28       ; ultima linha
-	loadn r4, #0        ; linha atual
-
-	DesenhaCenario_Loop2:
-	    inc r4
-	    loadn r3, #12   ; 12 colunas
-        DesenhaCenario_Loop2_Loop:
-    		outchar r0, r1
-            inc r1
-            dec r3
-            jnz DesenhaCenario_Loop2_Loop
-        loadn r5, #40
-        mul r1, r4, r5
-        loadn r5, #28
-        add r1, r1, r5
-        dec r2
-        jnz DesenhaCenario_Loop2
-
-	pop r6
-	pop r5
-	pop r4
-	pop r3
-	pop r2
-	pop r1
-	pop r0
-    rts
 
 ImprimeTelaInicio:
   push R0
