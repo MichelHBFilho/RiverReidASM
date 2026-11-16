@@ -46,7 +46,7 @@ jmp inicio
 	    static QuantidadeTiros + #0, #3
 	posTiros: var #3
 	CorpoTiroCaracter: var #1
-		static CorpoTiroCaracter + #0, #2409            ; i vermelho claro
+		static CorpoTiroCaracter + #0, #'i'            ; i vermelho claro
 ; ======================
 ; Variaveis Helicopteros
 ; ======================
@@ -1042,11 +1042,17 @@ DesenhaTodosTiros:
 	push r2 ; limite do vetor
 	push r3 ; valor do vetor
 	push r4 ; FlagMorto
+	push r7 ; cor do tiro
 
 	loadn r0, #posTiros
 	load r1, CorpoTiroCaracter
 	load r2, QuantidadeTiros
-	load r4, FlagMorto			
+	load r4, FlagMorto
+
+	; coloca a cor do score no tiro
+	call PegaCorScore
+	add r1, r1, r7
+
 	DesenhaTodosTiros_Loop:
 		loadi r3, r0
 		cmp r3, r4
@@ -1060,6 +1066,7 @@ DesenhaTodosTiros:
 			jnz DesenhaTodosTiros_Loop
 
 	DesenhaTodosTiros_Fim:
+		pop r7
 		pop r4
 		pop r3
 		pop r2
