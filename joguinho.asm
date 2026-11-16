@@ -1,4 +1,4 @@
-jmp main
+jmp inicio
 
 ; ======================
 ;        Textos
@@ -133,6 +133,13 @@ RAND: var #30
 	static RAND + #29, #76
 ContadorAleatorio: var #1
 
+inicio:
+	call ImprimeTelaInicio
+	loadn r1, #' '
+	inicio_loop:
+		inchar r0
+		cmp r1, r0
+		jne inicio_loop
 main:
 	call ApagaTela
     call ResetaVariaveis
@@ -141,7 +148,6 @@ main:
 
 	mainLoop:
 		call Desenha
-		call ConsomeCombustivel
 		call Delay
 		call Movimenta
 		call IncrementaContadorFrames
@@ -379,6 +385,10 @@ Movimenta:
 	mod r1, r0, r1
 	cz MovimentaTodosObjetoCombustivel
 
+	loadn r1, #200
+	mod r1, r0, r1
+	cz ConsomeCombustivel
+
 	Movimenta_Fim:
 		pop r1
 		pop r0
@@ -387,7 +397,7 @@ Movimenta:
 ; ======== GeraObjetosAleatoriamente ======
 ;	Gera todos os objetos na tela, chamando
 ;	as respectivas subrotinas. Assim como a
-;	movimenta se baseia no contador frames,
+;	Movimenta se baseia no contador frames,
 ; 	com a mesma lógica.
 ;
 ;	if(contadorFrames % tempo == 0)
@@ -431,10 +441,16 @@ AumentaScore:
 	pop r0
 	rts
 
-; r7 = cor retorno
+; ============== PegaCorScore =============
+;	O vetor CoresScore guarda uma lista
+;	de cores. Essa função escolhe a cor
+; 	com base na pontuação do jogador
+;	níveis a cada 50 pontos.
+;	r7 -> retorna a cor a ser usada
+; =========================================
 PegaCorScore:
-	push r0
-	push r1
+	push r0	; Score atual -> nivel atual
+	push r1	; distância entre níveis -> quantidade de cores 
 
 	load r0, SCORE
 	loadn r1, #50
@@ -454,14 +470,21 @@ PegaCorScore:
 	pop r0
 	rts
 
+; ============== DesenhaScore =============
+;	Desenha o Score na tela, com a função
+;	imprimeStr e ImprimeNumero, ambas rece-
+;	bem nos seguintes registradores:
+;		r0: posição inicial
+;		r1: informação a imprimir
+;		r2: cor <- PegaCorScore
+;
+;	Resultado na tela: canto inferior esq.
+;	SCORE: 00123
+; =========================================
 DesenhaScore:
-	push r0
-	push r1
-	push r2
-	push r3
-	push r4
-	push r5
-	push r6
+	push r0	; posicao de impressao
+	push r1	; endereço do texto -> score para imprimir
+	push r2 ; cor para impressão
 
 	call PegaCorScore
 	mov r2, r7	; r2 é usado no imprime str
@@ -473,27 +496,24 @@ DesenhaScore:
 	load r1, SCORE
 	call ImprimeNumero
 
-	pop r6
-	pop r5
-	pop r4
-	pop r3
 	pop r2
 	pop r1
 	pop r0
 	rts
 
-
-; ======================
-; 	   Funções Nave
-; ======================
+; ============== DesenharNave =============
+;	Desenha a nave na tela. Usa a posição
+;	da nave e soma os offsets do corpo
+;	nave e imprime o respectivo caracter
+; =========================================
 DesenharNave:
-    push r0
-	push r1
-	push r2
-	push r3
-	push r4
-	push r5
-	push r6
+    push r0	; pos absoluta da cabeça da nave
+	push r1	; endereço vetor corpo nave
+	push r2 ; endereço vetor caracteres da nave
+	push r3 ; posição relativa de uma parte da nave
+	push r4	; valor atual do r1 -> um offset da nave
+	push r5	; valor atual do r2 -> caracter para imprimir
+	push r6	; tamanho do corpo nave para controlar o loop
 
     load r0, posNave
 
@@ -526,37 +546,40 @@ DesenharNave:
 	pop r0
     rts
 
+; =============== ApagaNave ===============
+;	Apaga a nave da tela, baseado na pos
+;	atual da nave. Coloca um espaço branco
+;	em cada parte da nave.
+;	USO: antes de mover a nave! Senão,
+;	vai apagar o lugar errado.
+; =========================================
 ApagaNave:
-	push r0
-	push r1
-	push r2
-	push r3
-	push r4
-	push r5
-	push r6
+	push r0	; pos absoluta da cabeça da nave
+	push r1	; vetor corpo nave
+	push r2 ; espaço em branco -> borracha
+	push r3 ; Tamanho do corpo da nave para controlar o loop
+	push r4	; posicao com offset
+	push r5	; valor do r1 -> offset
 
     load r0, posNave
 
-    ; carrega o vetor corpo nave
     loadn r1, #CorpoNave
 
-	; TODO - preencher com o fundo
-    loadn r5, #' '			; Preenche com espaço branco!
+    loadn r2, #' '			; Preenche com espaço branco!
 
-    load r6, TamanhoCorpoNave
+    load r3, TamanhoCorpoNave
 
     ApagaNaveLoop:
-        mov r3, r0 			; posicao absoluta em r3
-        loadi r4, r1 		; r4 = offset relativo
-        add r3, r3, r4
+        mov r4, r0 			; posicao absoluta em r3
+        loadi r5, r1 		; r4 = offset relativo
+        add r4, r4, r5
 
-        outchar r5, r3
+        outchar r2, r4
 
         inc r1
-        dec r6
+        dec r3
         jnz ApagaNaveLoop
 
-    pop r6
 	pop r5
 	pop r4
 	pop r3
@@ -565,14 +588,18 @@ ApagaNave:
 	pop r0
     rts
 
+; ============= MovimentaNave =============
+;	Faz todas as ações da nave, com base
+;	no input do teclado. Movimenta para
+;	esquerda (a), direita (d) e atira (esp)
+;	
+;	OBS: Movimentar para esquerda e direita
+;	estão nessa subrotina. Atirar é uma sub
+;	rotina separada.
+; =========================================
 MovimentaNave:
-	push r0
-	push r1
-	push r2
-	push r3
-	push r4
-	push r5
-	push r6
+	push r0	; input do teclado -> posição da nave
+	push r1	; comparações -> limites de movimentação
 
 	inchar r0 				; if(r0 == 'a') esquerda() else if(r0 == 'd') direita()
 	loadn r1, #'a'
@@ -612,29 +639,17 @@ MovimentaNave:
 		jmp MovimentaNave_Fim
 
 	MovimentaNave_Fim:
-		pop r6
-		pop r5
-		pop r4
-		pop r3
-		pop r2
 		pop r1
 		pop r0
 		rts
 
+; ========== ConsomeCombustivel ===========
+;	Consome o combustível da nave e chama
+;	para redesenha-lo. Se o combustível ze
+;	rar então chama GameOver.
+; =========================================
 ConsomeCombustivel:
-	push r0
-	push r1
-	push r2
-	push r3
-	push r4
-	push r5
-	push r6
-
-	load r0, contadorFrames
-	loadn r1, #200
-	mod r0, r0, r1
-
-	jnz ConsomeCombustivel_Fim
+	push r0	; combustivel da nave
 
 	; decrementa combustivel
 	load r0, combustivelNave
@@ -644,24 +659,19 @@ ConsomeCombustivel:
 	jz GameOver
 	call DesenhaCombustivel ; So desenha o combustivel quando muda!
 
-	ConsomeCombustivel_Fim:
-		pop r6
-		pop r5
-		pop r4
-		pop r3
-		pop r2
-		pop r1
-		pop r0
-		rts
+	pop r0
+	rts
 
+; ========= AumentarCombustivel ===========
+;	Aumenta o combustível da nave, chamada
+;	quando o jogador encosta em um obj. 
+;	combustível. Aumenta 5 pontos no
+;	tanque. Caso ultrapasse 30 pontos não
+;	altera.
+; =========================================
 AumentarCombustivel:
-    push r0
-	push r1
-	push r2
-	push r3
-	push r4
-	push r5
-	push r6
+    push r0	; combustivel da nave
+	push r1	; incremento -> comparativo
 
 	load r0, combustivelNave
 	loadn r1, #5
@@ -678,33 +688,35 @@ AumentarCombustivel:
 
 	call DesenhaCombustivel
 
-    pop r6
-	pop r5
-	pop r4
-	pop r3
-	pop r2
 	pop r1
 	pop r0
 	rts
 
-; apaga e redesenha!
+; ========== DesenhaCombustivel ===========
+;	Desenha a barra de combustível na tela
+;	essa função também apaga a barra pré-
+; 	existente.
+;
+;	Chama ImprimeStr, que usa:
+;		r0: pos inicial
+;		r1: endereço da string
+;		r2: cor de impressão
+; =========================================
 DesenhaCombustivel:
-	push r0
-	push r1
-	push r2
-	push r3
-	push r4
-	push r5
-	push r6
+	push r0	; posições de impressao
+	push r1	; string -> quantidade de combustivel
+	push r2 ; caracter de bloco preenchido
+	push r3 ; caracter de espaço
+	push r4 ; limite da tela
 
-	loadn r0, #1160 			; Pos primeiro caracter
+	loadn r0, #1160
 	loadn r1, #combustivelTexto
 	loadn r2, #0
 	call ImprimeStr
 
 	loadn r0, #1166 			; Pos primeiro bloco de combustivel
 	load r1, combustivelNave
-	loadn r2, #125 			; bloco preenchido
+	loadn r2, #125 				; bloco preenchido
 	loadn r3, #' '
 	loadn r4, #1200 			; limite tela
 
@@ -722,8 +734,6 @@ DesenhaCombustivel:
 		cmp r0, r4				; if(r0 != limitetela) goto loop
 		jne DesenhaCombustivel_Loop2
 
-	pop r6
-	pop r5
 	pop r4
 	pop r3
 	pop r2
@@ -731,14 +741,18 @@ DesenhaCombustivel:
 	pop r0
 	rts
 
+; == GeraObjetoCombustivelAleatoriamente ==
+;	Gera o objeto combustível, utilizando
+;	a subrotina PegaNumeroAleatorio.
+;	O objeto gerado fica na primeira posi-
+;	ção livre do vetor, se não houver não
+;	gera.
+; =========================================
 GeraObjetoCombustivelAleatoriamente:
-	push r0
-	push r1
-	push r2
-	push r3
-	push r4
-	push r5
-	push r6
+	push r0 ; ponteiro vetor das posições combustivel
+	push r1	; limite do vetor
+	push r2 ; Flag de morto
+	push r3 ; valores do r0
 
 	loadn r0, #posCombustiveis
 	load r1, QuantidadeCombustiveis
@@ -767,35 +781,35 @@ GeraObjetoCombustivelAleatoriamente:
 		storei r0, r2
 
 	GeraObjetoCombustivelAleatoriamente_Fim:
-		pop r6
-		pop r5
-		pop r4
 		pop r3
 		pop r2
 		pop r1
 		pop r0
 		rts
 
+; ===== DesenhaTodosObjetoCombustivel =====
+;	Desenha cada um dos objetos do vetor
+;	posCombustiveis. Se o objeto tiver com
+;	a FlagMorto ele não é desenhado
+; =========================================
 DesenhaTodosObjetoCombustivel:
-	push r0
-	push r1
-	push r2
-	push r3
-	push r4
-	push r5
-	push r6
+	push r0 ; ponteiro do vetor de combustiveis
+	push r1	; limite do vetor
+	push r2 ; caracter para imprimir
+	push r3 ; valor do r0
+	push r4 ; flag morto para comparar
 
 	loadn r0, #posCombustiveis
 	load r1, QuantidadeCombustiveis
 	load r2, CombustivelObjetoCaracter
+	load r4, FlagMorto
 
 	DesenhaObjetoCombustivel_Loop:
 		loadi r3, r0
 
 		; Checa se o combustivel está morto
 		; se estiver morto não tem que desenahr
-		load r5, FlagMorto
-		cmp r3, r5
+		cmp r3, r4
 		jeq DesenhaObjetoCombustivel_Loop_Fim
 
 		outchar r2, r3
@@ -805,8 +819,6 @@ DesenhaTodosObjetoCombustivel:
 			dec r1
 			jnz DesenhaObjetoCombustivel_Loop
 
-	pop r6
-	pop r5
 	pop r4
 	pop r3
 	pop r2
@@ -814,24 +826,28 @@ DesenhaTodosObjetoCombustivel:
 	pop r0
 	rts
 
+; ====== ApagaTodosObjetoCombustivel ======
+;	Apaga todos objeto combustível da tela
+;	colocando um espaço em branco no lugar
+;	USO: Antes de movê-lo senão apaga o
+;	lugar errado e antes de mata-lo.
+; =========================================
 ApagaTodosObjetoCombustivel:
-	push r0
-	push r1
-	push r2
-	push r3
-	push r4
-	push r5
-	push r6
+	push r0 ; vetor de combustiveis
+	push r1	; limite do vetor
+	push r2 ; espaço em branco
+	push r3 ; valor do vetor
+	push r4 ; flag morto
 
 	loadn r0, #posCombustiveis
 	load r1, QuantidadeCombustiveis
 	loadn r2, #' '
+	load r4, FlagMorto
 
 	ApagaTodosObjetoCombustivel_Loop:
 		loadi r3, r0
 
 		; checa se ja morreu
-		load r4, FlagMorto
 		cmp r3, r4
 		jeq ApagaTodosObjetoCombustivel_Loop_Fim
 
@@ -842,8 +858,6 @@ ApagaTodosObjetoCombustivel:
 			dec r1
 			jnz ApagaTodosObjetoCombustivel_Loop
 
-	pop r6
-	pop r5
 	pop r4
 	pop r3
 	pop r2
@@ -851,32 +865,37 @@ ApagaTodosObjetoCombustivel:
 	pop r0
 	rts
 
+; ==== MovimentaTodosObjetoCombustivel ====
+;	Movimenta todos os objeto combustivel
+;	verticalmente para baixo. Apaga todos
+;	objeto combustível antes de mover, cha
+;	mando a respectiva subrotina.
+; =========================================
 MovimentaTodosObjetoCombustivel:
-	push r0
-	push r1
-	push r2
-	push r3
-	push r4
-	push r5
-	push r6
+	push r0 ; vetor de combustiveis
+	push r1 ; limite do vetor
+	push r2 ; Flag morto
+	push r3 ; valor do vetor
+	push r4 ; deslocamento para descer uma linha
+	push r5 ; limite vertical
 
 	call ApagaTodosObjetoCombustivel
 
 	loadn r0, #posCombustiveis
-	load r2, QuantidadeCombustiveis
+	load r1, QuantidadeCombustiveis
+	load r2, FlagMorto
+	loadn r4, #40
+	loadn r5, #1120
 
 	MovimentaTodosObjetoCombustivel_Loop:
 		loadi r3, r0
 
 		; checa se morreu
-		load r4, FlagMorto
-		cmp r3, r4
+		cmp r3, r2
 		jeq MovimentaTodosObjetoCombustivel_Loop_Fim
 
-		loadn r4, #40
 		add r3, r3, r4
 
-		loadn r5, #1120          ; limite (não invadir a barra de fuel)
 		cmp r3, r5
 		jle MovimentaTodosObjetoCombustivel_Loop_Salva
 
@@ -886,13 +905,12 @@ MovimentaTodosObjetoCombustivel:
 			storei r0, r3
 		MovimentaTodosObjetoCombustivel_Loop_Fim:
 			inc r0
-			dec r2
+			dec r1
 			jnz MovimentaTodosObjetoCombustivel_Loop
 
 	call ChecaColisaoTodosObjetoCombustivel
 
 	MovimentaTodosObjetoCombustivel_Fim:
-		pop r6
 		pop r5
 		pop r4
 		pop r3
@@ -901,37 +919,51 @@ MovimentaTodosObjetoCombustivel:
 		pop r0
 		rts
 
+; == ChecaColisaoTodosObjetoCombustivel ===
+;	Checa a colisão de todos objeto comb
+;	ustivel com a nave. Se houver colisão,
+;	chama a subrotina AumentarCombustivel,
+;	e também mata o combustível.
+; =========================================
 ChecaColisaoTodosObjetoCombustivel:
-	push r0
-	push r1
-	push r2
-	push r3
-	push r4
-	push r5
-	push r6
+	push r0 ; vetor de combustiveis
+	push r1 ; limite do vetor combustiveis
+	push r2 ; valor do r0
+	push r3 ; flag de morto -> posicao da nave
+	push r4 ; vetor de corpo da nave
+	push r5 ; limite do vetor corpo da nave
+	push r6 ; valor do vetor corpo nave + posicao da nave
 
 	loadn r0, #posCombustiveis
 	load r1, QuantidadeCombustiveis
 	ChecaColisaoTodosObjetoCombustivel_Loop:
 	    loadi r2, r0
 
-		load r3, FlagMorto
+		load r3, FlagMorto			; checa se o combustivel está morto
 		cmp r2, r3
 		jeq ChecaColisaoTodosObjetoCombustivel_Loop_Fim
+
+		; carrego as variaveis da nave
+		; NOTA: poderia mover o load do r3 para fora dos loops
+		; porém eu prefiro aqui para ficar mais organizado, mesmo
+		; que aumente bastante o número de instruções.
 
         load r3, posNave
 	    loadn r4, #CorpoNave
 	    load r5, TamanhoCorpoNave
 		ChecaColisaoTodosObjetoCombustivel_Loop_2:
-		    loadi r6, r4
-			add r6, r6, r3
-			cmp r2, r6
+		    loadi r6, r4	; carrega o valor do offset no r6
+			add r6, r6, r3 	; soma a posição absoluta ao offset
+			cmp r2, r6		; compara com a posicao do combustivel
 
+			; if(r2 != r6) continue
 			jne ChecaColisaoTodosObjetoCombustivel_Loop_2_Fim
 
-            ceq AumentarCombustivel
-            ceq MataObjetoCombustivel
-            jmp ChecaColisaoTodosObjetoCombustivel_Fim
+            call AumentarCombustivel
+            call MataObjetoCombustivel
+            
+            ; Se colidiu em um lugar já parte para o próximo objeto
+            jmp ChecaColisaoTodosObjetoCombustivel_Loop_Fim 
 
             ChecaColisaoTodosObjetoCombustivel_Loop_2_Fim:
                 inc r4
@@ -2405,5 +2437,1294 @@ DesenhaCenario:
 	pop r0
     rts
 
+ImprimeTelaInicio:
+  push R0
+  push R1
+  push R2
+  push R3
+
+  loadn R0, #telainicio
+  loadn R1, #0
+  loadn R2, #1200
+
+  ImprimeTelaInicio_Loop:
+
+    add R3,R0,R1
+    loadi R3, R3
+    outchar R3, R1
+    inc R1
+    cmp R1, R2
+
+    jne ImprimeTelaInicio_Loop
+
+  pop R3
+  pop R2
+  pop R1
+  pop R0
+  rts
+
 
 jmp main
+
+telainicio : var #1200
+  ;Linha 0
+  static telainicio + #0, #3967
+  static telainicio + #1, #3967
+  static telainicio + #2, #3967
+  static telainicio + #3, #3967
+  static telainicio + #4, #3967
+  static telainicio + #5, #3967
+  static telainicio + #6, #3967
+  static telainicio + #7, #3967
+  static telainicio + #8, #3967
+  static telainicio + #9, #3967
+  static telainicio + #10, #3967
+  static telainicio + #11, #3967
+  static telainicio + #12, #3967
+  static telainicio + #13, #3967
+  static telainicio + #14, #3967
+  static telainicio + #15, #3967
+  static telainicio + #16, #3967
+  static telainicio + #17, #3967
+  static telainicio + #18, #3967
+  static telainicio + #19, #3967
+  static telainicio + #20, #3967
+  static telainicio + #21, #3967
+  static telainicio + #22, #3967
+  static telainicio + #23, #3967
+  static telainicio + #24, #3967
+  static telainicio + #25, #3967
+  static telainicio + #26, #3967
+  static telainicio + #27, #3967
+  static telainicio + #28, #3967
+  static telainicio + #29, #3967
+  static telainicio + #30, #3967
+  static telainicio + #31, #3967
+  static telainicio + #32, #3967
+  static telainicio + #33, #3967
+  static telainicio + #34, #3967
+  static telainicio + #35, #3967
+  static telainicio + #36, #3967
+  static telainicio + #37, #3967
+  static telainicio + #38, #3967
+  static telainicio + #39, #3967
+
+  ;Linha 1
+  static telainicio + #40, #3967
+  static telainicio + #41, #3967
+  static telainicio + #42, #3967
+  static telainicio + #43, #3967
+  static telainicio + #44, #3967
+  static telainicio + #45, #3967
+  static telainicio + #46, #3967
+  static telainicio + #47, #3967
+  static telainicio + #48, #3967
+  static telainicio + #49, #3967
+  static telainicio + #50, #3967
+  static telainicio + #51, #3967
+  static telainicio + #52, #3967
+  static telainicio + #53, #3967
+  static telainicio + #54, #3967
+  static telainicio + #55, #3967
+  static telainicio + #56, #3967
+  static telainicio + #57, #3967
+  static telainicio + #58, #3967
+  static telainicio + #59, #3967
+  static telainicio + #60, #3967
+  static telainicio + #61, #3967
+  static telainicio + #62, #3967
+  static telainicio + #63, #3967
+  static telainicio + #64, #3967
+  static telainicio + #65, #3967
+  static telainicio + #66, #3967
+  static telainicio + #67, #3967
+  static telainicio + #68, #3967
+  static telainicio + #69, #3967
+  static telainicio + #70, #3967
+  static telainicio + #71, #3967
+  static telainicio + #72, #3967
+  static telainicio + #73, #3967
+  static telainicio + #74, #3967
+  static telainicio + #75, #3967
+  static telainicio + #76, #3967
+  static telainicio + #77, #3967
+  static telainicio + #78, #3967
+  static telainicio + #79, #3967
+
+  ;Linha 2
+  static telainicio + #80, #3967
+  static telainicio + #81, #3967
+  static telainicio + #82, #3967
+  static telainicio + #83, #3967
+  static telainicio + #84, #3967
+  static telainicio + #85, #3967
+  static telainicio + #86, #3967
+  static telainicio + #87, #3967
+  static telainicio + #88, #3967
+  static telainicio + #89, #3967
+  static telainicio + #90, #3967
+  static telainicio + #91, #3967
+  static telainicio + #92, #3967
+  static telainicio + #93, #3967
+  static telainicio + #94, #3967
+  static telainicio + #95, #3967
+  static telainicio + #96, #3967
+  static telainicio + #97, #3967
+  static telainicio + #98, #3967
+  static telainicio + #99, #3967
+  static telainicio + #100, #3967
+  static telainicio + #101, #3967
+  static telainicio + #102, #3967
+  static telainicio + #103, #3967
+  static telainicio + #104, #3967
+  static telainicio + #105, #3967
+  static telainicio + #106, #3967
+  static telainicio + #107, #3967
+  static telainicio + #108, #3967
+  static telainicio + #109, #3967
+  static telainicio + #110, #3967
+  static telainicio + #111, #3967
+  static telainicio + #112, #3967
+  static telainicio + #113, #3967
+  static telainicio + #114, #3967
+  static telainicio + #115, #3967
+  static telainicio + #116, #3967
+  static telainicio + #117, #3967
+  static telainicio + #118, #3967
+  static telainicio + #119, #3967
+
+  ;Linha 3
+  static telainicio + #120, #3967
+  static telainicio + #121, #3967
+  static telainicio + #122, #3967
+  static telainicio + #123, #3967
+  static telainicio + #124, #3967
+  static telainicio + #125, #3967
+  static telainicio + #126, #3967
+  static telainicio + #127, #3967
+  static telainicio + #128, #3967
+  static telainicio + #129, #3967
+  static telainicio + #130, #3967
+  static telainicio + #131, #3967
+  static telainicio + #132, #3967
+  static telainicio + #133, #3967
+  static telainicio + #134, #3967
+  static telainicio + #135, #3967
+  static telainicio + #136, #3967
+  static telainicio + #137, #3967
+  static telainicio + #138, #3967
+  static telainicio + #139, #3967
+  static telainicio + #140, #3967
+  static telainicio + #141, #3967
+  static telainicio + #142, #3967
+  static telainicio + #143, #3967
+  static telainicio + #144, #3967
+  static telainicio + #145, #3967
+  static telainicio + #146, #3967
+  static telainicio + #147, #3967
+  static telainicio + #148, #3967
+  static telainicio + #149, #3967
+  static telainicio + #150, #3967
+  static telainicio + #151, #3967
+  static telainicio + #152, #3967
+  static telainicio + #153, #3967
+  static telainicio + #154, #3967
+  static telainicio + #155, #3967
+  static telainicio + #156, #3967
+  static telainicio + #157, #3967
+  static telainicio + #158, #3967
+  static telainicio + #159, #3967
+
+  ;Linha 4
+  static telainicio + #160, #3967
+  static telainicio + #161, #3967
+  static telainicio + #162, #3967
+  static telainicio + #163, #3967
+  static telainicio + #164, #3967
+  static telainicio + #165, #3967
+  static telainicio + #166, #3967
+  static telainicio + #167, #3967
+  static telainicio + #168, #3967
+  static telainicio + #169, #3967
+  static telainicio + #170, #3967
+  static telainicio + #171, #3967
+  static telainicio + #172, #3967
+  static telainicio + #173, #3967
+  static telainicio + #174, #3967
+  static telainicio + #175, #3967
+  static telainicio + #176, #3967
+  static telainicio + #177, #3967
+  static telainicio + #178, #3967
+  static telainicio + #179, #3967
+  static telainicio + #180, #3967
+  static telainicio + #181, #3967
+  static telainicio + #182, #3967
+  static telainicio + #183, #3967
+  static telainicio + #184, #3967
+  static telainicio + #185, #3967
+  static telainicio + #186, #3967
+  static telainicio + #187, #3967
+  static telainicio + #188, #3967
+  static telainicio + #189, #3967
+  static telainicio + #190, #3967
+  static telainicio + #191, #3967
+  static telainicio + #192, #3967
+  static telainicio + #193, #3967
+  static telainicio + #194, #3967
+  static telainicio + #195, #3967
+  static telainicio + #196, #3967
+  static telainicio + #197, #3967
+  static telainicio + #198, #3967
+  static telainicio + #199, #3967
+
+  ;Linha 5
+  static telainicio + #200, #3967
+  static telainicio + #201, #3967
+  static telainicio + #202, #3967
+  static telainicio + #203, #3967
+  static telainicio + #204, #3967
+  static telainicio + #205, #3967
+  static telainicio + #206, #3967
+  static telainicio + #207, #3967
+  static telainicio + #208, #3967
+  static telainicio + #209, #3967
+  static telainicio + #210, #3967
+  static telainicio + #211, #3967
+  static telainicio + #212, #3967
+  static telainicio + #213, #3967
+  static telainicio + #214, #3967
+  static telainicio + #215, #3967
+  static telainicio + #216, #3967
+  static telainicio + #217, #3967
+  static telainicio + #218, #3967
+  static telainicio + #219, #3967
+  static telainicio + #220, #3967
+  static telainicio + #221, #3967
+  static telainicio + #222, #3967
+  static telainicio + #223, #3967
+  static telainicio + #224, #3967
+  static telainicio + #225, #3967
+  static telainicio + #226, #3967
+  static telainicio + #227, #3967
+  static telainicio + #228, #3967
+  static telainicio + #229, #3967
+  static telainicio + #230, #3967
+  static telainicio + #231, #3967
+  static telainicio + #232, #3967
+  static telainicio + #233, #3967
+  static telainicio + #234, #3967
+  static telainicio + #235, #3967
+  static telainicio + #236, #3967
+  static telainicio + #237, #3967
+  static telainicio + #238, #3967
+  static telainicio + #239, #3967
+
+  ;Linha 6
+  static telainicio + #240, #3967
+  static telainicio + #241, #3967
+  static telainicio + #242, #3967
+  static telainicio + #243, #3967
+  static telainicio + #244, #3967
+  static telainicio + #245, #3967
+  static telainicio + #246, #3967
+  static telainicio + #247, #3967
+  static telainicio + #248, #3967
+  static telainicio + #249, #3967
+  static telainicio + #250, #3967
+  static telainicio + #251, #3967
+  static telainicio + #252, #3967
+  static telainicio + #253, #3967
+  static telainicio + #254, #3967
+  static telainicio + #255, #3967
+  static telainicio + #256, #3967
+  static telainicio + #257, #3967
+  static telainicio + #258, #3967
+  static telainicio + #259, #3967
+  static telainicio + #260, #3967
+  static telainicio + #261, #3967
+  static telainicio + #262, #3967
+  static telainicio + #263, #3967
+  static telainicio + #264, #3967
+  static telainicio + #265, #3967
+  static telainicio + #266, #3967
+  static telainicio + #267, #3967
+  static telainicio + #268, #3967
+  static telainicio + #269, #3967
+  static telainicio + #270, #3967
+  static telainicio + #271, #3967
+  static telainicio + #272, #3967
+  static telainicio + #273, #3967
+  static telainicio + #274, #3967
+  static telainicio + #275, #3967
+  static telainicio + #276, #3967
+  static telainicio + #277, #3967
+  static telainicio + #278, #3967
+  static telainicio + #279, #3967
+
+  ;Linha 7
+  static telainicio + #280, #3967
+  static telainicio + #281, #3967
+  static telainicio + #282, #3967
+  static telainicio + #283, #3967
+  static telainicio + #284, #3967
+  static telainicio + #285, #3967
+  static telainicio + #286, #3967
+  static telainicio + #287, #3967
+  static telainicio + #288, #3967
+  static telainicio + #289, #3967
+  static telainicio + #290, #3967
+  static telainicio + #291, #3967
+  static telainicio + #292, #3967
+  static telainicio + #293, #3967
+  static telainicio + #294, #3967
+  static telainicio + #295, #3967
+  static telainicio + #296, #3967
+  static telainicio + #297, #3967
+  static telainicio + #298, #3967
+  static telainicio + #299, #3967
+  static telainicio + #300, #3967
+  static telainicio + #301, #3967
+  static telainicio + #302, #3967
+  static telainicio + #303, #3967
+  static telainicio + #304, #3967
+  static telainicio + #305, #3967
+  static telainicio + #306, #114
+  static telainicio + #307, #3967
+  static telainicio + #308, #3967
+  static telainicio + #309, #3967
+  static telainicio + #310, #3967
+  static telainicio + #311, #3967
+  static telainicio + #312, #3967
+  static telainicio + #313, #3967
+  static telainicio + #314, #3967
+  static telainicio + #315, #3967
+  static telainicio + #316, #3967
+  static telainicio + #317, #3967
+  static telainicio + #318, #3967
+  static telainicio + #319, #3967
+
+  ;Linha 8
+  static telainicio + #320, #3967
+  static telainicio + #321, #3967
+  static telainicio + #322, #3967
+  static telainicio + #323, #3967
+  static telainicio + #324, #3967
+  static telainicio + #325, #3967
+  static telainicio + #326, #3967
+  static telainicio + #327, #3967
+  static telainicio + #328, #3967
+  static telainicio + #329, #3967
+  static telainicio + #330, #3967
+  static telainicio + #331, #3967
+  static telainicio + #332, #2386
+  static telainicio + #333, #2377
+  static telainicio + #334, #2390
+  static telainicio + #335, #2373
+  static telainicio + #336, #2386
+  static telainicio + #337, #3967
+  static telainicio + #338, #3967
+  static telainicio + #339, #3967
+  static telainicio + #340, #2386
+  static telainicio + #341, #2369
+  static telainicio + #342, #2377
+  static telainicio + #343, #2372
+  static telainicio + #344, #3967
+  static telainicio + #345, #116
+  static telainicio + #346, #115
+  static telainicio + #347, #109
+  static telainicio + #348, #3967
+  static telainicio + #349, #3967
+  static telainicio + #350, #3967
+  static telainicio + #351, #3967
+  static telainicio + #352, #3967
+  static telainicio + #353, #3967
+  static telainicio + #354, #3967
+  static telainicio + #355, #3967
+  static telainicio + #356, #3967
+  static telainicio + #357, #3967
+  static telainicio + #358, #3967
+  static telainicio + #359, #3967
+
+  ;Linha 9
+  static telainicio + #360, #3967
+  static telainicio + #361, #3967
+  static telainicio + #362, #3967
+  static telainicio + #363, #3967
+  static telainicio + #364, #3967
+  static telainicio + #365, #3967
+  static telainicio + #366, #3967
+  static telainicio + #367, #3967
+  static telainicio + #368, #3967
+  static telainicio + #369, #3967
+  static telainicio + #370, #3967
+  static telainicio + #371, #3967
+  static telainicio + #372, #3967
+  static telainicio + #373, #3967
+  static telainicio + #374, #3967
+  static telainicio + #375, #3967
+  static telainicio + #376, #3967
+  static telainicio + #377, #3967
+  static telainicio + #378, #3967
+  static telainicio + #379, #3967
+  static telainicio + #380, #3967
+  static telainicio + #381, #3967
+  static telainicio + #382, #3967
+  static telainicio + #383, #3967
+  static telainicio + #384, #3967
+  static telainicio + #385, #3967
+  static telainicio + #386, #117
+  static telainicio + #387, #3967
+  static telainicio + #388, #3967
+  static telainicio + #389, #3967
+  static telainicio + #390, #3967
+  static telainicio + #391, #3967
+  static telainicio + #392, #3967
+  static telainicio + #393, #3967
+  static telainicio + #394, #3967
+  static telainicio + #395, #3967
+  static telainicio + #396, #3967
+  static telainicio + #397, #3967
+  static telainicio + #398, #3967
+  static telainicio + #399, #3967
+
+  ;Linha 10
+  static telainicio + #400, #3967
+  static telainicio + #401, #3967
+  static telainicio + #402, #3967
+  static telainicio + #403, #3967
+  static telainicio + #404, #3967
+  static telainicio + #405, #3967
+  static telainicio + #406, #3967
+  static telainicio + #407, #3967
+  static telainicio + #408, #3967
+  static telainicio + #409, #3967
+  static telainicio + #410, #3967
+  static telainicio + #411, #3967
+  static telainicio + #412, #3967
+  static telainicio + #413, #3967
+  static telainicio + #414, #3967
+  static telainicio + #415, #3967
+  static telainicio + #416, #3967
+  static telainicio + #417, #3967
+  static telainicio + #418, #3967
+  static telainicio + #419, #3967
+  static telainicio + #420, #3967
+  static telainicio + #421, #3967
+  static telainicio + #422, #3967
+  static telainicio + #423, #3967
+  static telainicio + #424, #3967
+  static telainicio + #425, #3967
+  static telainicio + #426, #3967
+  static telainicio + #427, #3967
+  static telainicio + #428, #3967
+  static telainicio + #429, #3967
+  static telainicio + #430, #3967
+  static telainicio + #431, #3967
+  static telainicio + #432, #3967
+  static telainicio + #433, #3967
+  static telainicio + #434, #3967
+  static telainicio + #435, #3967
+  static telainicio + #436, #3967
+  static telainicio + #437, #3967
+  static telainicio + #438, #3967
+  static telainicio + #439, #3967
+
+  ;Linha 11
+  static telainicio + #440, #3967
+  static telainicio + #441, #3967
+  static telainicio + #442, #3967
+  static telainicio + #443, #3967
+  static telainicio + #444, #3967
+  static telainicio + #445, #3967
+  static telainicio + #446, #3967
+  static telainicio + #447, #3967
+  static telainicio + #448, #3967
+  static telainicio + #449, #3967
+  static telainicio + #450, #3967
+  static telainicio + #451, #3967
+  static telainicio + #452, #3967
+  static telainicio + #453, #3967
+  static telainicio + #454, #3967
+  static telainicio + #455, #3967
+  static telainicio + #456, #3967
+  static telainicio + #457, #3967
+  static telainicio + #458, #3967
+  static telainicio + #459, #3967
+  static telainicio + #460, #3967
+  static telainicio + #461, #3967
+  static telainicio + #462, #3967
+  static telainicio + #463, #3967
+  static telainicio + #464, #3967
+  static telainicio + #465, #3967
+  static telainicio + #466, #3967
+  static telainicio + #467, #3967
+  static telainicio + #468, #3967
+  static telainicio + #469, #3967
+  static telainicio + #470, #3967
+  static telainicio + #471, #3967
+  static telainicio + #472, #3967
+  static telainicio + #473, #3967
+  static telainicio + #474, #3967
+  static telainicio + #475, #3967
+  static telainicio + #476, #3967
+  static telainicio + #477, #3967
+  static telainicio + #478, #3967
+  static telainicio + #479, #3967
+
+  ;Linha 12
+  static telainicio + #480, #3967
+  static telainicio + #481, #3967
+  static telainicio + #482, #3967
+  static telainicio + #483, #3967
+  static telainicio + #484, #3967
+  static telainicio + #485, #3967
+  static telainicio + #486, #3967
+  static telainicio + #487, #3967
+  static telainicio + #488, #3967
+  static telainicio + #489, #3967
+  static telainicio + #490, #3967
+  static telainicio + #491, #1646
+  static telainicio + #492, #1647
+  static telainicio + #493, #3967
+  static telainicio + #494, #3967
+  static telainicio + #495, #3967
+  static telainicio + #496, #3967
+  static telainicio + #497, #3967
+  static telainicio + #498, #3967
+  static telainicio + #499, #3967
+  static telainicio + #500, #3967
+  static telainicio + #501, #3967
+  static telainicio + #502, #3967
+  static telainicio + #503, #3967
+  static telainicio + #504, #3967
+  static telainicio + #505, #3967
+  static telainicio + #506, #3967
+  static telainicio + #507, #3967
+  static telainicio + #508, #3967
+  static telainicio + #509, #3967
+  static telainicio + #510, #3967
+  static telainicio + #511, #3967
+  static telainicio + #512, #3967
+  static telainicio + #513, #3967
+  static telainicio + #514, #3967
+  static telainicio + #515, #3967
+  static telainicio + #516, #3967
+  static telainicio + #517, #3967
+  static telainicio + #518, #3967
+  static telainicio + #519, #3967
+
+  ;Linha 13
+  static telainicio + #520, #3967
+  static telainicio + #521, #3967
+  static telainicio + #522, #3967
+  static telainicio + #523, #3967
+  static telainicio + #524, #3967
+  static telainicio + #525, #3967
+  static telainicio + #526, #3967
+  static telainicio + #527, #3967
+  static telainicio + #528, #3967
+  static telainicio + #529, #3967
+  static telainicio + #530, #3967
+  static telainicio + #531, #1636
+  static telainicio + #532, #1644
+  static telainicio + #533, #3967
+  static telainicio + #534, #3967
+  static telainicio + #535, #3967
+  static telainicio + #536, #3967
+  static telainicio + #537, #3967
+  static telainicio + #538, #3967
+  static telainicio + #539, #3967
+  static telainicio + #540, #3967
+  static telainicio + #541, #3967
+  static telainicio + #542, #2922
+  static telainicio + #543, #2923
+  static telainicio + #544, #3967
+  static telainicio + #545, #3967
+  static telainicio + #546, #3967
+  static telainicio + #547, #3967
+  static telainicio + #548, #3967
+  static telainicio + #549, #3967
+  static telainicio + #550, #3967
+  static telainicio + #551, #3967
+  static telainicio + #552, #3967
+  static telainicio + #553, #3967
+  static telainicio + #554, #3967
+  static telainicio + #555, #3967
+  static telainicio + #556, #3967
+  static telainicio + #557, #3967
+  static telainicio + #558, #3967
+  static telainicio + #559, #3967
+
+  ;Linha 14
+  static telainicio + #560, #3967
+  static telainicio + #561, #3967
+  static telainicio + #562, #3967
+  static telainicio + #563, #3967
+  static telainicio + #564, #3967
+  static telainicio + #565, #3967
+  static telainicio + #566, #3967
+  static telainicio + #567, #3967
+  static telainicio + #568, #3967
+  static telainicio + #569, #3967
+  static telainicio + #570, #3967
+  static telainicio + #571, #3967
+  static telainicio + #572, #3967
+  static telainicio + #573, #3967
+  static telainicio + #574, #3967
+  static telainicio + #575, #3967
+  static telainicio + #576, #3967
+  static telainicio + #577, #3967
+  static telainicio + #578, #3967
+  static telainicio + #579, #3967
+  static telainicio + #580, #3967
+  static telainicio + #581, #3967
+  static telainicio + #582, #3967
+  static telainicio + #583, #3967
+  static telainicio + #584, #3967
+  static telainicio + #585, #3967
+  static telainicio + #586, #3967
+  static telainicio + #587, #3967
+  static telainicio + #588, #3967
+  static telainicio + #589, #3967
+  static telainicio + #590, #3967
+  static telainicio + #591, #3967
+  static telainicio + #592, #3967
+  static telainicio + #593, #3967
+  static telainicio + #594, #3967
+  static telainicio + #595, #3967
+  static telainicio + #596, #3967
+  static telainicio + #597, #3967
+  static telainicio + #598, #3967
+  static telainicio + #599, #3967
+
+  ;Linha 15
+  static telainicio + #600, #3967
+  static telainicio + #601, #3967
+  static telainicio + #602, #3967
+  static telainicio + #603, #3967
+  static telainicio + #604, #3967
+  static telainicio + #605, #3967
+  static telainicio + #606, #3967
+  static telainicio + #607, #3967
+  static telainicio + #608, #3967
+  static telainicio + #609, #3967
+  static telainicio + #610, #3967
+  static telainicio + #611, #3967
+  static telainicio + #612, #3967
+  static telainicio + #613, #3967
+  static telainicio + #614, #3967
+  static telainicio + #615, #3967
+  static telainicio + #616, #3967
+  static telainicio + #617, #3967
+  static telainicio + #618, #3967
+  static telainicio + #619, #3967
+  static telainicio + #620, #3967
+  static telainicio + #621, #3967
+  static telainicio + #622, #3967
+  static telainicio + #623, #3967
+  static telainicio + #624, #3967
+  static telainicio + #625, #3967
+  static telainicio + #626, #3967
+  static telainicio + #627, #3967
+  static telainicio + #628, #3967
+  static telainicio + #629, #3967
+  static telainicio + #630, #3967
+  static telainicio + #631, #3967
+  static telainicio + #632, #3967
+  static telainicio + #633, #3967
+  static telainicio + #634, #3967
+  static telainicio + #635, #3967
+  static telainicio + #636, #3967
+  static telainicio + #637, #3967
+  static telainicio + #638, #3967
+  static telainicio + #639, #3967
+
+  ;Linha 16
+  static telainicio + #640, #3967
+  static telainicio + #641, #3967
+  static telainicio + #642, #3967
+  static telainicio + #643, #3967
+  static telainicio + #644, #3967
+  static telainicio + #645, #3967
+  static telainicio + #646, #3967
+  static telainicio + #647, #3967
+  static telainicio + #648, #3967
+  static telainicio + #649, #3967
+  static telainicio + #650, #3967
+  static telainicio + #651, #3967
+  static telainicio + #652, #3967
+  static telainicio + #653, #3967
+  static telainicio + #654, #3967
+  static telainicio + #655, #3967
+  static telainicio + #656, #3967
+  static telainicio + #657, #3967
+  static telainicio + #658, #3967
+  static telainicio + #659, #3967
+  static telainicio + #660, #3967
+  static telainicio + #661, #3967
+  static telainicio + #662, #3967
+  static telainicio + #663, #3967
+  static telainicio + #664, #3967
+  static telainicio + #665, #3967
+  static telainicio + #666, #3967
+  static telainicio + #667, #3967
+  static telainicio + #668, #3967
+  static telainicio + #669, #3967
+  static telainicio + #670, #3967
+  static telainicio + #671, #3967
+  static telainicio + #672, #3967
+  static telainicio + #673, #3967
+  static telainicio + #674, #3967
+  static telainicio + #675, #3967
+  static telainicio + #676, #3967
+  static telainicio + #677, #3967
+  static telainicio + #678, #3967
+  static telainicio + #679, #3967
+
+  ;Linha 17
+  static telainicio + #680, #3967
+  static telainicio + #681, #3967
+  static telainicio + #682, #3967
+  static telainicio + #683, #3967
+  static telainicio + #684, #3967
+  static telainicio + #685, #3967
+  static telainicio + #686, #3967
+  static telainicio + #687, #3967
+  static telainicio + #688, #3967
+  static telainicio + #689, #3967
+  static telainicio + #690, #3967
+  static telainicio + #691, #3967
+  static telainicio + #692, #3967
+  static telainicio + #693, #3967
+  static telainicio + #694, #3967
+  static telainicio + #695, #3967
+  static telainicio + #696, #3967
+  static telainicio + #697, #3967
+  static telainicio + #698, #3967
+  static telainicio + #699, #3967
+  static telainicio + #700, #3967
+  static telainicio + #701, #3967
+  static telainicio + #702, #3967
+  static telainicio + #703, #3967
+  static telainicio + #704, #3967
+  static telainicio + #705, #3967
+  static telainicio + #706, #3967
+  static telainicio + #707, #3967
+  static telainicio + #708, #3967
+  static telainicio + #709, #3967
+  static telainicio + #710, #3967
+  static telainicio + #711, #3967
+  static telainicio + #712, #3967
+  static telainicio + #713, #3967
+  static telainicio + #714, #3967
+  static telainicio + #715, #3967
+  static telainicio + #716, #3967
+  static telainicio + #717, #3967
+  static telainicio + #718, #3967
+  static telainicio + #719, #3967
+
+  ;Linha 18
+  static telainicio + #720, #3967
+  static telainicio + #721, #3967
+  static telainicio + #722, #3967
+  static telainicio + #723, #3967
+  static telainicio + #724, #3967
+  static telainicio + #725, #3967
+  static telainicio + #726, #3967
+  static telainicio + #727, #3967
+  static telainicio + #728, #3967
+  static telainicio + #729, #3967
+  static telainicio + #730, #3967
+  static telainicio + #731, #3967
+  static telainicio + #732, #3967
+  static telainicio + #733, #3967
+  static telainicio + #734, #3967
+  static telainicio + #735, #3967
+  static telainicio + #736, #3967
+  static telainicio + #737, #3967
+  static telainicio + #738, #3967
+  static telainicio + #739, #3967
+  static telainicio + #740, #3967
+  static telainicio + #741, #3967
+  static telainicio + #742, #3967
+  static telainicio + #743, #3967
+  static telainicio + #744, #3967
+  static telainicio + #745, #3967
+  static telainicio + #746, #3967
+  static telainicio + #747, #3967
+  static telainicio + #748, #3967
+  static telainicio + #749, #3967
+  static telainicio + #750, #3967
+  static telainicio + #751, #3967
+  static telainicio + #752, #3967
+  static telainicio + #753, #3967
+  static telainicio + #754, #3967
+  static telainicio + #755, #3967
+  static telainicio + #756, #3967
+  static telainicio + #757, #3967
+  static telainicio + #758, #3967
+  static telainicio + #759, #3967
+
+  ;Linha 19
+  static telainicio + #760, #3967
+  static telainicio + #761, #3967
+  static telainicio + #762, #3967
+  static telainicio + #763, #3967
+  static telainicio + #764, #3967
+  static telainicio + #765, #3967
+  static telainicio + #766, #3137
+  static telainicio + #767, #3152
+  static telainicio + #768, #3141
+  static telainicio + #769, #3154
+  static telainicio + #770, #3156
+  static telainicio + #771, #3141
+  static telainicio + #772, #3967
+  static telainicio + #773, #2373
+  static telainicio + #774, #2387
+  static telainicio + #775, #2384
+  static telainicio + #776, #2369
+  static telainicio + #777, #2371
+  static telainicio + #778, #2383
+  static telainicio + #779, #3967
+  static telainicio + #780, #3152
+  static telainicio + #781, #3137
+  static telainicio + #782, #3154
+  static telainicio + #783, #3137
+  static telainicio + #784, #3967
+  static telainicio + #785, #3139
+  static telainicio + #786, #3151
+  static telainicio + #787, #3149
+  static telainicio + #788, #3141
+  static telainicio + #789, #3139
+  static telainicio + #790, #3137
+  static telainicio + #791, #3154
+  static telainicio + #792, #3967
+  static telainicio + #793, #3967
+  static telainicio + #794, #3967
+  static telainicio + #795, #3967
+  static telainicio + #796, #3967
+  static telainicio + #797, #3967
+  static telainicio + #798, #3967
+  static telainicio + #799, #3967
+
+  ;Linha 20
+  static telainicio + #800, #3967
+  static telainicio + #801, #3967
+  static telainicio + #802, #3967
+  static telainicio + #803, #3967
+  static telainicio + #804, #3967
+  static telainicio + #805, #3967
+  static telainicio + #806, #3967
+  static telainicio + #807, #3967
+  static telainicio + #808, #3967
+  static telainicio + #809, #3967
+  static telainicio + #810, #3967
+  static telainicio + #811, #3967
+  static telainicio + #812, #3967
+  static telainicio + #813, #3967
+  static telainicio + #814, #3967
+  static telainicio + #815, #3967
+  static telainicio + #816, #3967
+  static telainicio + #817, #3967
+  static telainicio + #818, #3967
+  static telainicio + #819, #3967
+  static telainicio + #820, #3967
+  static telainicio + #821, #3967
+  static telainicio + #822, #3967
+  static telainicio + #823, #3967
+  static telainicio + #824, #3967
+  static telainicio + #825, #3967
+  static telainicio + #826, #3967
+  static telainicio + #827, #3967
+  static telainicio + #828, #3967
+  static telainicio + #829, #3967
+  static telainicio + #830, #3967
+  static telainicio + #831, #3967
+  static telainicio + #832, #3967
+  static telainicio + #833, #3967
+  static telainicio + #834, #3967
+  static telainicio + #835, #3967
+  static telainicio + #836, #3967
+  static telainicio + #837, #3967
+  static telainicio + #838, #3967
+  static telainicio + #839, #3967
+
+  ;Linha 21
+  static telainicio + #840, #3967
+  static telainicio + #841, #3967
+  static telainicio + #842, #3967
+  static telainicio + #843, #3967
+  static telainicio + #844, #3967
+  static telainicio + #845, #3967
+  static telainicio + #846, #3967
+  static telainicio + #847, #3967
+  static telainicio + #848, #3967
+  static telainicio + #849, #3967
+  static telainicio + #850, #3967
+  static telainicio + #851, #3967
+  static telainicio + #852, #3967
+  static telainicio + #853, #3967
+  static telainicio + #854, #3967
+  static telainicio + #855, #3967
+  static telainicio + #856, #3967
+  static telainicio + #857, #3967
+  static telainicio + #858, #3967
+  static telainicio + #859, #3967
+  static telainicio + #860, #3967
+  static telainicio + #861, #3967
+  static telainicio + #862, #3967
+  static telainicio + #863, #3967
+  static telainicio + #864, #3967
+  static telainicio + #865, #3967
+  static telainicio + #866, #3967
+  static telainicio + #867, #3967
+  static telainicio + #868, #3967
+  static telainicio + #869, #3967
+  static telainicio + #870, #3967
+  static telainicio + #871, #3967
+  static telainicio + #872, #3967
+  static telainicio + #873, #3967
+  static telainicio + #874, #3967
+  static telainicio + #875, #3967
+  static telainicio + #876, #3967
+  static telainicio + #877, #3967
+  static telainicio + #878, #3967
+  static telainicio + #879, #3967
+
+  ;Linha 22
+  static telainicio + #880, #3967
+  static telainicio + #881, #3967
+  static telainicio + #882, #3967
+  static telainicio + #883, #3967
+  static telainicio + #884, #3967
+  static telainicio + #885, #3967
+  static telainicio + #886, #3967
+  static telainicio + #887, #3967
+  static telainicio + #888, #3967
+  static telainicio + #889, #3967
+  static telainicio + #890, #3967
+  static telainicio + #891, #3967
+  static telainicio + #892, #3967
+  static telainicio + #893, #3967
+  static telainicio + #894, #3967
+  static telainicio + #895, #3967
+  static telainicio + #896, #3967
+  static telainicio + #897, #3967
+  static telainicio + #898, #3967
+  static telainicio + #899, #3967
+  static telainicio + #900, #3967
+  static telainicio + #901, #3967
+  static telainicio + #902, #3967
+  static telainicio + #903, #3967
+  static telainicio + #904, #3967
+  static telainicio + #905, #3967
+  static telainicio + #906, #3967
+  static telainicio + #907, #3967
+  static telainicio + #908, #3967
+  static telainicio + #909, #3967
+  static telainicio + #910, #3967
+  static telainicio + #911, #3967
+  static telainicio + #912, #3967
+  static telainicio + #913, #3967
+  static telainicio + #914, #3967
+  static telainicio + #915, #3967
+  static telainicio + #916, #3967
+  static telainicio + #917, #3967
+  static telainicio + #918, #3967
+  static telainicio + #919, #3967
+
+  ;Linha 23
+  static telainicio + #920, #3967
+  static telainicio + #921, #3967
+  static telainicio + #922, #3967
+  static telainicio + #923, #3967
+  static telainicio + #924, #3967
+  static telainicio + #925, #3967
+  static telainicio + #926, #3967
+  static telainicio + #927, #3967
+  static telainicio + #928, #3967
+  static telainicio + #929, #3967
+  static telainicio + #930, #3967
+  static telainicio + #931, #3967
+  static telainicio + #932, #3967
+  static telainicio + #933, #3967
+  static telainicio + #934, #3967
+  static telainicio + #935, #3967
+  static telainicio + #936, #3967
+  static telainicio + #937, #3967
+  static telainicio + #938, #3967
+  static telainicio + #939, #3967
+  static telainicio + #940, #3967
+  static telainicio + #941, #3967
+  static telainicio + #942, #3967
+  static telainicio + #943, #3967
+  static telainicio + #944, #3967
+  static telainicio + #945, #3967
+  static telainicio + #946, #3967
+  static telainicio + #947, #3967
+  static telainicio + #948, #3967
+  static telainicio + #949, #3967
+  static telainicio + #950, #3967
+  static telainicio + #951, #3967
+  static telainicio + #952, #3967
+  static telainicio + #953, #3967
+  static telainicio + #954, #3967
+  static telainicio + #955, #3967
+  static telainicio + #956, #3967
+  static telainicio + #957, #3967
+  static telainicio + #958, #3967
+  static telainicio + #959, #3967
+
+  ;Linha 24
+  static telainicio + #960, #2599
+  static telainicio + #961, #2599
+  static telainicio + #962, #2599
+  static telainicio + #963, #2599
+  static telainicio + #964, #2599
+  static telainicio + #965, #2599
+  static telainicio + #966, #2599
+  static telainicio + #967, #2599
+  static telainicio + #968, #2599
+  static telainicio + #969, #2599
+  static telainicio + #970, #2599
+  static telainicio + #971, #2599
+  static telainicio + #972, #2599
+  static telainicio + #973, #2599
+  static telainicio + #974, #2599
+  static telainicio + #975, #2599
+  static telainicio + #976, #2599
+  static telainicio + #977, #2599
+  static telainicio + #978, #2599
+  static telainicio + #979, #2599
+  static telainicio + #980, #2599
+  static telainicio + #981, #2599
+  static telainicio + #982, #2599
+  static telainicio + #983, #2599
+  static telainicio + #984, #2599
+  static telainicio + #985, #2599
+  static telainicio + #986, #2599
+  static telainicio + #987, #2599
+  static telainicio + #988, #2599
+  static telainicio + #989, #2599
+  static telainicio + #990, #2599
+  static telainicio + #991, #2599
+  static telainicio + #992, #2599
+  static telainicio + #993, #2599
+  static telainicio + #994, #2599
+  static telainicio + #995, #2599
+  static telainicio + #996, #2599
+  static telainicio + #997, #2599
+  static telainicio + #998, #2599
+  static telainicio + #999, #2599
+
+  ;Linha 25
+  static telainicio + #1000, #2599
+  static telainicio + #1001, #2599
+  static telainicio + #1002, #2599
+  static telainicio + #1003, #2599
+  static telainicio + #1004, #2599
+  static telainicio + #1005, #2599
+  static telainicio + #1006, #2599
+  static telainicio + #1007, #2599
+  static telainicio + #1008, #2599
+  static telainicio + #1009, #2599
+  static telainicio + #1010, #2599
+  static telainicio + #1011, #2599
+  static telainicio + #1012, #2599
+  static telainicio + #1013, #2599
+  static telainicio + #1014, #2599
+  static telainicio + #1015, #2599
+  static telainicio + #1016, #2599
+  static telainicio + #1017, #2599
+  static telainicio + #1018, #2599
+  static telainicio + #1019, #2599
+  static telainicio + #1020, #2599
+  static telainicio + #1021, #2599
+  static telainicio + #1022, #2599
+  static telainicio + #1023, #2599
+  static telainicio + #1024, #2599
+  static telainicio + #1025, #2599
+  static telainicio + #1026, #2599
+  static telainicio + #1027, #2599
+  static telainicio + #1028, #2599
+  static telainicio + #1029, #2599
+  static telainicio + #1030, #2599
+  static telainicio + #1031, #2599
+  static telainicio + #1032, #2599
+  static telainicio + #1033, #2599
+  static telainicio + #1034, #2599
+  static telainicio + #1035, #2599
+  static telainicio + #1036, #2599
+  static telainicio + #1037, #2599
+  static telainicio + #1038, #2599
+  static telainicio + #1039, #2599
+
+  ;Linha 26
+  static telainicio + #1040, #2599
+  static telainicio + #1041, #2599
+  static telainicio + #1042, #2599
+  static telainicio + #1043, #2599
+  static telainicio + #1044, #2599
+  static telainicio + #1045, #2599
+  static telainicio + #1046, #2599
+  static telainicio + #1047, #2599
+  static telainicio + #1048, #2599
+  static telainicio + #1049, #2599
+  static telainicio + #1050, #2599
+  static telainicio + #1051, #2599
+  static telainicio + #1052, #2599
+  static telainicio + #1053, #2599
+  static telainicio + #1054, #2599
+  static telainicio + #1055, #2599
+  static telainicio + #1056, #2599
+  static telainicio + #1057, #2599
+  static telainicio + #1058, #2599
+  static telainicio + #1059, #2599
+  static telainicio + #1060, #2599
+  static telainicio + #1061, #2599
+  static telainicio + #1062, #2599
+  static telainicio + #1063, #2599
+  static telainicio + #1064, #2599
+  static telainicio + #1065, #2599
+  static telainicio + #1066, #2599
+  static telainicio + #1067, #2599
+  static telainicio + #1068, #2599
+  static telainicio + #1069, #2599
+  static telainicio + #1070, #2599
+  static telainicio + #1071, #2599
+  static telainicio + #1072, #2599
+  static telainicio + #1073, #2599
+  static telainicio + #1074, #2599
+  static telainicio + #1075, #2599
+  static telainicio + #1076, #2599
+  static telainicio + #1077, #2599
+  static telainicio + #1078, #2599
+  static telainicio + #1079, #2599
+
+  ;Linha 27
+  static telainicio + #1080, #2599
+  static telainicio + #1081, #2599
+  static telainicio + #1082, #2599
+  static telainicio + #1083, #2599
+  static telainicio + #1084, #2599
+  static telainicio + #1085, #2599
+  static telainicio + #1086, #2599
+  static telainicio + #1087, #2599
+  static telainicio + #1088, #2599
+  static telainicio + #1089, #2599
+  static telainicio + #1090, #2599
+  static telainicio + #1091, #2599
+  static telainicio + #1092, #2599
+  static telainicio + #1093, #2599
+  static telainicio + #1094, #2599
+  static telainicio + #1095, #2599
+  static telainicio + #1096, #2599
+  static telainicio + #1097, #2599
+  static telainicio + #1098, #2599
+  static telainicio + #1099, #2599
+  static telainicio + #1100, #2599
+  static telainicio + #1101, #2599
+  static telainicio + #1102, #2599
+  static telainicio + #1103, #2599
+  static telainicio + #1104, #2599
+  static telainicio + #1105, #2599
+  static telainicio + #1106, #2599
+  static telainicio + #1107, #2599
+  static telainicio + #1108, #2599
+  static telainicio + #1109, #2599
+  static telainicio + #1110, #2599
+  static telainicio + #1111, #2599
+  static telainicio + #1112, #2599
+  static telainicio + #1113, #2599
+  static telainicio + #1114, #2599
+  static telainicio + #1115, #2599
+  static telainicio + #1116, #2599
+  static telainicio + #1117, #2599
+  static telainicio + #1118, #2599
+  static telainicio + #1119, #2599
+
+  ;Linha 28
+  static telainicio + #1120, #2599
+  static telainicio + #1121, #2599
+  static telainicio + #1122, #2599
+  static telainicio + #1123, #2599
+  static telainicio + #1124, #2599
+  static telainicio + #1125, #2599
+  static telainicio + #1126, #2599
+  static telainicio + #1127, #2599
+  static telainicio + #1128, #2599
+  static telainicio + #1129, #2599
+  static telainicio + #1130, #2599
+  static telainicio + #1131, #2599
+  static telainicio + #1132, #2599
+  static telainicio + #1133, #2599
+  static telainicio + #1134, #2599
+  static telainicio + #1135, #2599
+  static telainicio + #1136, #2599
+  static telainicio + #1137, #2599
+  static telainicio + #1138, #2599
+  static telainicio + #1139, #2599
+  static telainicio + #1140, #2599
+  static telainicio + #1141, #2599
+  static telainicio + #1142, #2599
+  static telainicio + #1143, #2599
+  static telainicio + #1144, #2599
+  static telainicio + #1145, #2599
+  static telainicio + #1146, #2599
+  static telainicio + #1147, #2599
+  static telainicio + #1148, #2599
+  static telainicio + #1149, #2599
+  static telainicio + #1150, #2599
+  static telainicio + #1151, #2599
+  static telainicio + #1152, #2599
+  static telainicio + #1153, #2599
+  static telainicio + #1154, #2599
+  static telainicio + #1155, #2599
+  static telainicio + #1156, #2599
+  static telainicio + #1157, #2599
+  static telainicio + #1158, #2599
+  static telainicio + #1159, #2599
+
+  ;Linha 29
+  static telainicio + #1160, #2599
+  static telainicio + #1161, #2599
+  static telainicio + #1162, #2599
+  static telainicio + #1163, #2599
+  static telainicio + #1164, #2599
+  static telainicio + #1165, #2599
+  static telainicio + #1166, #2599
+  static telainicio + #1167, #2599
+  static telainicio + #1168, #2599
+  static telainicio + #1169, #2599
+  static telainicio + #1170, #2599
+  static telainicio + #1171, #2599
+  static telainicio + #1172, #2599
+  static telainicio + #1173, #2599
+  static telainicio + #1174, #2599
+  static telainicio + #1175, #2599
+  static telainicio + #1176, #2599
+  static telainicio + #1177, #2599
+  static telainicio + #1178, #2599
+  static telainicio + #1179, #2599
+  static telainicio + #1180, #2599
+  static telainicio + #1181, #2599
+  static telainicio + #1182, #2599
+  static telainicio + #1183, #2599
+  static telainicio + #1184, #2599
+  static telainicio + #1185, #2599
+  static telainicio + #1186, #2599
+  static telainicio + #1187, #2599
+  static telainicio + #1188, #2599
+  static telainicio + #1189, #2599
+  static telainicio + #1190, #2599
+  static telainicio + #1191, #2599
+  static telainicio + #1192, #2599
+  static telainicio + #1193, #2599
+  static telainicio + #1194, #2599
+  static telainicio + #1195, #2599
+  static telainicio + #1196, #2599
+  static telainicio + #1197, #2599
+  static telainicio + #1198, #2599
+  static telainicio + #1199, #2599
+
+
